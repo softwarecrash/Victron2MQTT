@@ -1,10 +1,3 @@
-/*
-DALY BMS to MQTT Project
-https://github.com/softwarecrash/DALY-BMS-to-MQTT
-This code is free for use without any waranty.
-when copy code or reuse make a note where the codes comes from.
-*/
-
 const char HTML_MAIN[] PROGMEM = R"rawliteral(
     %HEAD_TEMPLATE%
 <div class="row gx-0 mb-2" id="vcc_alert" style="display: none;">
@@ -12,115 +5,122 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
     <span><b>WARNING ESP VOLTAGE TO LOW</b></span>
     </div>
 </div>
+
+<div class="row gx-0 mb-2">
+<div class="col">
+<button id="prevInv" type="button" class="btn btn-primary">&#8882;</button>
+</div>
+<div class="col-9">
 <figure class="text-center">
-    <h2 id="devicename"></h2>
+    <h3 id="devicename"></h3>
 </figure>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="progress" style="height:1.8rem;">
-            <div id="packSOC" class="progress-bar" role="progressbar" style="width:0%;height:1.8rem;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-        </div>
-    </div>
 </div>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">Package:</div>
-    </div>
-    <div class="col">
-        <div class="bg-light"><span id="packV"></span><span id="packA"></span><span id="packP"></span></div>
-    </div>
+<div class="col">
+<button id="nextInv" type="button" class="btn btn-primary" style="float: right;">&#8883;</button>
 </div>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">Remaining Capacity: </div>
-    </div>
-    <div class="col">
-        <div class="bg-light"><span id="packRes"></span></div>
-    </div>
 </div>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">Charge Cycles: </div>
-    </div>
-    <div class="col">
-        <div class="bg-light"><span id="packCycles"></span></div>
-    </div>
-</div>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">Temperature: </div>
-    </div>
-    <div class="col">
-        <div class="bg-light"><span id="packTemp"></span></div>
-    </div>
-</div>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">Cell Difference: </div>
-    </div>
-    <div class="col">
-        <div class="bg-light"><span id="cellDiff"></span></div>
-    </div>
-</div>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">Cells ↑/↓:</div>
-    </div>
-    <div class="col">
-        <div class="bg-light"><span id="cellH"></span><span id="cellL"></span></div>
-    </div>
-    
-</div>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">BMS Status: </div>
-    </div>
-    <div class="col">
 
-        <div class="bg-light">
-        <span id="status"></span>
-            <button id="wakebms" type="button" class="btn btn-warning" style="padding: 0px;font-size: 12px;">Wake BMS</button>
-        </div>
 
-    </div>
-</div>
 <div class="row gx-0 mb-2">
     <div class="col">
-        <div class="bg-light">Charge MOS:</div>
+        <div class="bg-light">Device Time: </div>
     </div>
     <div class="col">
-        <div class="bg-light form-check form-switch">
-            <input class="form-check-input" type="checkbox" role="switch" id="chargeFetState">
-        </div>
+        <div class="bg-light"><span id="devtime"></span></br></div>
     </div>
 </div>
+
 <div class="row gx-0 mb-2">
     <div class="col">
-        <div class="bg-light">Discharge MOS:</div>
+        <div class="bg-light">Solar: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="solarV"></span><span id="solarA"></span><span id="solarW"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">Battery: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="battV"></span><span id="battA"></span><span id="battW"></span><span
+                id="battSOC"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">Load: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="loadV"></span><span id="loadA"></span><span id="loadW"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">temperature: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="deviceTemp"></span><span id="battTemp"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">Consumed Kwh: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="consD"></span><span id="consM"></span><span id="consY"></span><span
+                id="consT"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">generated Kwh: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="genD"></span><span id="genM"></span><span id="genY"></span><span
+                id="genT"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">CO2 Reduction: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="cored"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">Input State: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="inputstate"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">Charge Mode: </div>
+    </div>
+    <div class="col">
+        <div class="bg-light"><span id="chrgmode"></span></div>
+    </div>
+</div>
+
+<div class="row gx-0 mb-2">
+    <div class="col">
+        <div class="bg-light">Load State: </div>
     </div>
     <div class="col">
         <div class="bg-light form-check form-switch"><input class="form-check-input" type="checkbox" role="switch"
-                id="disChargeFetState"></div>
-    </div>
-</div>
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">Balance State: </div>
-    </div>
-    <div class="col">
-        <div class="bg-light form-check form-switch"><input class="form-check-input" type="checkbox" role="switch"
-                id="cellBalanceActive" disabled></div>
-    </div>
-</div>
-<div class="row gx-0 mb-2" style="%ESP01%">
-    <div class="row gx-0 mb-2">
-        <div class="col">
-            <div class="bg-light">Relais Output: </div>
-        </div>
-        <div class="col">
-            <div class="bg-light form-check form-switch"><input class="form-check-input" type="checkbox" role="switch"
-                    id="relaisOutputActive" disabled></div>
-        </div>
+                id="loadState" /></div>
     </div>
 </div>
 <div class="d-grid gap-2">
@@ -128,18 +128,16 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
 </div>
 
 <script>
-$(document).ready(function () {
-        initWebSocket();
-        initButton();
-        });
-    var gateway = `ws://${window.location.host}/ws`;
+    var gateway = `ws://${window.location.hostname}/ws`;
     var websocket;
+    var selInverter = 1;
+    var invQuantity = 1;
+    window.addEventListener('load', onLoad);
     function initWebSocket() {
         console.log('Trying to open a WebSocket connection...');
         websocket = new WebSocket(gateway);
         websocket.onopen = onOpen;
         websocket.onclose = onClose;
-        websocket.onerror = onError;
         websocket.onmessage = onMessage;
     }
     function onOpen(event) {
@@ -147,94 +145,104 @@ $(document).ready(function () {
     }
     function onClose(event) {
         console.log('Connection closed');
-        setTimeout(initWebSocket, 3000);
-    }
-    function onError(event) {
-        console.log('Connection lost');
+        setTimeout(initWebSocket, 2000);
     }
     function onMessage(event) {
         var data = JSON.parse(event.data);
-        document.getElementById("devicename").innerHTML = data.Device.Name;
-        document.getElementById("packV").innerHTML = data.Pack.Voltage + 'V ';
-        document.getElementById("packA").innerHTML = data.Pack.Current + 'A  ';
-        document.getElementById("packP").innerHTML = Math.round(data.Pack.Power) + 'W  ';
-        document.getElementById("packSOC").innerHTML = data.Pack.SOC + '%%';
-        $('#packSOC').width(data.Pack.SOC + "%").attr('aria-valuenow', data.Pack.SOC);
-        document.getElementById("packRes").innerHTML = data.Pack.Remaining_mAh + 'mAh ';
 
-        document.getElementById("cellH").innerHTML = data.Pack.High_CellNr + '↑' + data.Pack.High_CellV + 'V ';
-        document.getElementById("cellL").innerHTML = data.Pack.Low_CellNr + '↓' + data.Pack.Low_CellV + 'V ';
+        document.getElementById("devicename").innerHTML = data.DEVICE_NAME == null ? 'No Connection' : 'Device: ' + data.DEVICE_NAME;
 
-        document.getElementById("packCycles").innerHTML = data.Pack.Cycles + ' ';
-        document.getElementById("packTemp").innerHTML = data.Pack.BMS_Temp + '°C ';
-        document.getElementById("cellDiff").innerHTML = data.Pack.Cell_Diff + 'mV ';
-        document.getElementById("status").innerHTML = data.Pack.Status;
-        document.getElementById("chargeFetState").checked = data.Pack.ChargeFET;
-        document.getElementById("disChargeFetState").checked = data.Pack.DischargeFET;
-        document.getElementById("cellBalanceActive").checked = data.Pack.Balance_Active;
-        document.getElementById("relaisOutputActive").checked = data.Device.Relais_Active;
+        document.getElementById("devtime").innerHTML = unixTimetoDateTime(data.DEVICE_TIME);
 
-        if(data.Pack.Status == "offline"){
-            document.getElementById("status").style.color = "red";
-            document.getElementById("wakebms").style.display = '';
-        } else {
-            document.getElementById("status").style.color = "black";
-            document.getElementById("wakebms").style.display = 'none';
+        document.getElementById("solarV").innerHTML = data.LiveData.SOLAR_VOLTS + 'V ';
+        document.getElementById("solarA").innerHTML = data.LiveData.SOLAR_AMPS + 'A  ';
+        document.getElementById("solarW").innerHTML = data.LiveData.SOLAR_WATTS + 'W  ';
+        document.getElementById("battSOC").innerHTML = data.LiveData.BATTERY_SOC + '%%';
+
+        document.getElementById("battV").innerHTML = data.LiveData.BATT_VOLTS + 'V ';
+        document.getElementById("battA").innerHTML = data.LiveData.BATT_AMPS + 'A  ';
+        document.getElementById("battW").innerHTML = data.LiveData.BATT_WATTS + 'W  ';
+
+        document.getElementById("loadV").innerHTML = data.LiveData.LOAD_VOLTS + 'V ';
+        document.getElementById("loadA").innerHTML = data.LiveData.LOAD_AMPS + 'A  ';
+        document.getElementById("loadW").innerHTML = data.LiveData.LOAD_WATTS + 'W  ';
+
+        document.getElementById("deviceTemp").innerHTML = data.DEVICE_TEMPERATURE + '°C  ';
+        if(data.BATTERY_TEMPERATURE != 25){
+        document.getElementById("battTemp").innerHTML = ' | ' + data.BATTERY_TEMPERATURE + '°C  ';
         }
-        if(data.Device.Relais_Manual){
-            relaisOutputActive.removeAttribute("disabled")
-        } else{
-            relaisOutputActive.setAttribute('disabled', 'disabled');
+        document.getElementById("consD").innerHTML = 'D:' + data.StatsData.CONS_ENERGY_DAY + '  ';
+        document.getElementById("consM").innerHTML = 'M:' + data.StatsData.CONS_ENGERY_MON + '  ';
+        document.getElementById("consY").innerHTML = 'Y:' + data.StatsData.CONS_ENGERY_YEAR + '  ';
+        document.getElementById("consT").innerHTML = 'T:' + data.StatsData.CONS_ENGERY_TOT;
+
+        document.getElementById("genD").innerHTML = 'D:' + data.StatsData.GEN_ENERGY_DAY + '  ';
+        document.getElementById("genM").innerHTML = 'M:' + data.StatsData.GEN_ENERGY_MON + '  ';
+        document.getElementById("genY").innerHTML = 'Y:' + data.StatsData.GEN_ENERGY_YEAR + '  ';
+        document.getElementById("genT").innerHTML = 'T:' + data.StatsData.GEN_ENERGY_TOT;
+
+        document.getElementById("cored").innerHTML = data.StatsData.CO2_REDUCTION + 't ';
+
+        document.getElementById("inputstate").innerHTML = data.CHARGER_INPUT_STATUS;
+        document.getElementById("chrgmode").innerHTML = data.CHARGER_MODE;
+
+        document.getElementById("loadState").checked = data.LOAD_STATE;
+        invQuantity = data.DEVICE_QUANTITY;
+            if(invQuantity <= 1){
+            document.getElementById('prevInv').style.visibility = 'hidden';
+            document.getElementById('nextInv').style.visibility = 'hidden';
         }
-        if (data.Device.ESP_VCC < 2.6) {
+        if (data.ESP_VCC < 2.6) {
             document.getElementById("vcc_alert").style.display = '';
         }else{
             document.getElementById("vcc_alert").style.display = 'none';
         }
+
+    }
+
+    function onLoad(event) {
+        initWebSocket();
+        initButton();
     }
 
     function initButton() {
-        document.getElementById('chargeFetState').addEventListener('click', ChargeFetSwitch);
-        document.getElementById('disChargeFetState').addEventListener('click', DischargeFetSwitch);
-        document.getElementById('relaisOutputActive').addEventListener('click', RelaisOutputSwitch);
-        document.getElementById('wakebms').addEventListener('click', wakeBms);
+        document.getElementById('loadState').addEventListener('click', LoadSwitch);
+
+        document.getElementById('prevInv').addEventListener('click', SelInvp);
+        document.getElementById('nextInv').addEventListener('click', SelInvn);
     }
 
-    function wakeBms() {
-        let switchVal;
-        switchVal = 'wake_bms';
-        websocket.send(switchVal);
+
+    function LoadSwitch() {
+        let loadSwitch;
+        if (document.getElementById('loadState').checked) { loadSwitch = 1 }
+        else { loadSwitch = 0 }
+
+        websocket.send('loadSwitch_' + selInverter + '_' + loadSwitch);
     }
 
-    function ChargeFetSwitch() {
-        let switchVal;
-        if (document.getElementById('chargeFetState').checked) { switchVal = 'chargeFetSwitch_on' }
-        else { switchVal = 'chargeFetSwitch_off' }
-        websocket.send(switchVal);
+    function SelInvp() {
+        if (selInverter > 1) {
+            selInverter--;
+            websocket.send('wsSelInv_' + selInverter);
+        }
+    }
+    function SelInvn() {
+        if (selInverter < invQuantity) {
+            selInverter++;
+            websocket.send('wsSelInv_' + selInverter);
+        }
     }
 
-    function RelaisOutputSwitch() {
-        let switchVal;
-        if (document.getElementById('relaisOutputActive').checked) { switchVal = 'relaisOutputSwitch_on' }
-        else { switchVal = 'relaisOutputSwitch_off' }
-        websocket.send(switchVal);
-    }
-
-    function DischargeFetSwitch() {
-        let switchVal;
-        if (document.getElementById('disChargeFetState').checked) {
-			switchVal = 'dischargeFetSwitch_on';
-			websocket.send(switchVal);
-		}
-        else { 
-            switchVal = 'dischargeFetSwitch_off';
-			var check = confirm('Are you sure to disable the DISCHARGE MOS?! You maybe create your own personal blackout!'); 
-			if (check) {
-				websocket.send(switchVal);
-			} else {
-				document.getElementById("disChargeFetState").checked = true;
-			}
-		}
+    function unixTimetoDateTime(unixTime) {
+        var deviceDate = new Date(unixTime * 1000);
+        var formatedTime = (deviceDate.getFullYear()) + "-" +
+            ((deviceDate.getMonth() + 1) < 10 ? '0' : '') + (deviceDate.getMonth() + 1) + "-" +
+            (deviceDate.getDate() < 10 ? '0' : '') + deviceDate.getDate() + " " +
+            (deviceDate.getHours() < 10 ? '0' : '') + deviceDate.getHours() + ":" +
+            (deviceDate.getMinutes() < 10 ? '0' : '') + deviceDate.getMinutes() + ":" +
+            (deviceDate.getSeconds() < 10 ? '0' : '') + deviceDate.getSeconds();
+        return formatedTime;
     }
 </script>
 %FOOT_TEMPLATE%

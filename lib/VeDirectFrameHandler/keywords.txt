@@ -1,0 +1,29 @@
+
+##############################################
+# Syntax Coloring Map For VeDirectFrameHandler
+##############################################
+
+##############################################
+# Datatypes (KEYWORD1)
+##############################################
+
+VeDirectFrameHandler    KEYWORD1
+
+##############################################
+# Methods and Functions (KEYWORD2)
+##############################################
+
+rxData  KEYWORD2
+txtRxEvent  KEYWORD2
+frameEndEvent   KEYWORD2
+logE    KEYWORD2
+hexRxEvent  KEYWORD2
+
+##############################################
+# Constants (LITERAL1)
+##############################################
+
+frameLen    LITERAL1
+nameLen LITERAL1
+valueLen    LITERAL1
+buffLen LITERAL1
