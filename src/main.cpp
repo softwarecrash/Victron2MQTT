@@ -1,10 +1,4 @@
 /*
-DALY BMS to MQTT Project
-https://github.com/softwarecrash/DALY-BMS-to-MQTT
-This code is free for use without any waranty.
-when copy code or reuse make a note where the codes comes from.
-
-
 Dear programmer:
 When I wrote this code, only god and
 I knew how it worked.
@@ -19,7 +13,7 @@ total_hours_wasted_here = 254
 */
 
 #include "main.h"
-#include <daly-bms-uart.h> // This is where the library gets pulled in
+//#include <daly-bms-uart.h> // This is where the library gets pulled in
 
 #include "display.h"
 
@@ -58,7 +52,7 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncWebSocketClient *wsClient;
 DNSServer dns;
-Daly_BMS_UART bms(MYPORT_RX, MYPORT_TX);
+//Daly_BMS_UART bms(MYPORT_RX, MYPORT_TX);
 
 #include "status-LED.h"
 
@@ -154,6 +148,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   {
     data[len] = 0;
     updateProgress = true;
+    /*
     if (strcmp((char *)data, "dischargeFetSwitch_on") == 0)
     {
       bms.setDischargeMOS(true);
@@ -184,6 +179,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       DEBUG_PRINTLN(F("wakeup manual from Web"));
       DEBUG_WEBLN(F("wakeup manual from Web"));
     }
+    */
     updateProgress = false;
   }
 }
@@ -241,27 +237,27 @@ bool relaisHandler()
     {
     case 0:
       // Mode 0 - Lowest Cell Voltage
-      relaisCompareValueTmp = bms.get.minCellmV / 1000;
+      //relaisCompareValueTmp = bms.get.minCellmV / 1000;
       break;
     case 1:
       // Mode 1 - Highest Cell Voltage
-      relaisCompareValueTmp = bms.get.maxCellmV / 1000;
+      //relaisCompareValueTmp = bms.get.maxCellmV / 1000;
       break;
     case 2:
       // Mode 2 - Pack Voltage
-      relaisCompareValueTmp = bms.get.packVoltage;
+      //relaisCompareValueTmp = bms.get.packVoltage;
       break;
     case 3:
       // Mode 3 - Temperature
-      relaisCompareValueTmp = bms.get.tempAverage;
+      //relaisCompareValueTmp = bms.get.tempAverage;
       break;
     case 4:
       // Mode 4 - Manual per WEB or MQTT
       break;
     }
 
-    if (!bms.get.connectionState)
-      relaisCompareValueTmp = '\0';
+    //if (!bms.get.connectionState)
+    //  relaisCompareValueTmp = '\0';
     if (relaisCompareValueTmp == '\0' && _settings.data.relaisFunction != 4)
     {
       if (_settings.data.relaisFailsafe)
@@ -420,10 +416,10 @@ void setup()
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
   AsyncWiFiManagerParameter custom_mqtt_user("mqtt_user", "MQTT User", NULL, 32);
   AsyncWiFiManagerParameter custom_mqtt_pass("mqtt_pass", "MQTT Password", NULL, 32);
-  AsyncWiFiManagerParameter custom_mqtt_topic("mqtt_topic", "MQTT Topic", "BMS01", 32);
+  AsyncWiFiManagerParameter custom_mqtt_topic("mqtt_topic", "MQTT Topic", "Victron", 32);
   AsyncWiFiManagerParameter custom_mqtt_port("mqtt_port", "MQTT Port", "1883", 5);
   AsyncWiFiManagerParameter custom_mqtt_refresh("mqtt_refresh", "MQTT Send Interval", "300", 4);
-  AsyncWiFiManagerParameter custom_device_name("device_name", "Device Name", "DALY-BMS-to-MQTT", 32);
+  AsyncWiFiManagerParameter custom_device_name("device_name", "Device Name", "Victron2MQTT", 32);
 
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_user);
@@ -433,7 +429,7 @@ void setup()
   wm.addParameter(&custom_mqtt_refresh);
   wm.addParameter(&custom_device_name);
 
-  bool apRunning = wm.autoConnect("DALY-BMS-AP");
+  bool apRunning = wm.autoConnect("Victron2MQTT-AP");
 
   // save settings if wifi setup is fire up
   if (shouldSaveConfig)
@@ -635,7 +631,7 @@ void loop()
 
     if (!updateProgress)
     {
-      bms.update(); // moved from upper
+      //bms.update(); // moved from upper
       if (millis() >= (bmstimer + (3 * 1000)) && wsClient != nullptr && wsClient->canSend())
       {
         getJsonDevice();
@@ -734,16 +730,6 @@ void getJsonData()
   packJson[F("Heartbeat")] = bms.get.bmsHeartBeat;
   packJson[F("Balance_Active")] = bms.get.cellBalanceActive ? true : false;
 
-  for (size_t i = 0; i < size_t(bms.get.numberOfCells); i++)
-  {
-    cellVJson[F("CellV_") + String(i + 1)] = bms.get.cellVmV[i] / 1000;
-    cellVJson[F("Balance_") + String(i + 1)] = bms.get.cellBalanceState[i];
-  }
-
-  for (size_t i = 0; i < size_t(bms.get.numOfTempSensors); i++)
-  {
-    cellTempJson[F("Cell_Temp_") + String(i + 1)] = bms.get.cellTemperature[i];
-  }
 }
 
 char *topicBuilder(char *buffer, char const *path, char const *numering = "")
@@ -772,6 +758,7 @@ bool sendtoMQTT()
   DEBUG_WEB(F("Info: Data sent to MQTT Server... "));
   if (!_settings.data.mqttJson)
   {
+    /*
     mqttclient.publish(topicBuilder(buff, "Pack_Voltage"), dtostrf(bms.get.packVoltage, 4, 1, msgBuffer));
     mqttclient.publish(topicBuilder(buff, "Pack_Current"), dtostrf(bms.get.packCurrent, 4, 1, msgBuffer));
     mqttclient.publish(topicBuilder(buff, "Pack_Power"), dtostrf((bms.get.packVoltage * bms.get.packCurrent), 4, 1, msgBuffer));
@@ -802,6 +789,7 @@ bool sendtoMQTT()
     }
     mqttclient.publish(topicBuilder(buff, "RelaisOutput_Active"), relaisComparsionResult ? "true" : "false");
     mqttclient.publish(topicBuilder(buff, "RelaisOutput_Manual"), (_settings.data.relaisFunction == 4) ? "true" : "false"); // should we keep this? you can check with iobroker etc. if you can even switch the relais using mqtt
+  */
   }
   else
   {
@@ -819,6 +807,7 @@ bool sendtoMQTT()
 
 void mqttcallback(char *topic, unsigned char *payload, unsigned int length)
 {
+  /*
   char buff[256];
   if (firstPublish == false)
     return;
@@ -968,5 +957,6 @@ bool connectMQTT()
     }
     firstPublish = true;
   }
+  */
   return true;
 }

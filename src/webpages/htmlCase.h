@@ -31,7 +31,7 @@ const char HTML_HEAD[] PROGMEM = R"rawliteral(
 
 const char HTML_FOOT[] PROGMEM = R"rawliteral(
         <figure class="text-center">
-        DALY BMS to MQTT <a id="software_version">%SOFTWARE_VERSION%</a> By <a href="https://github.com/softwarecrash/" target="_blank">Softwarecrash</a>
+        Victron2MQTT <a id="software_version">%SOFTWARE_VERSION%</a> By <a href="https://github.com/softwarecrash/Victron2MQTT/" target="_blank">Softwarecrash</a>
         <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://licensebuttons.net/l/by-nc-sa/4.0/80x15.png" /></a>
         </figure>
     </div>
@@ -40,7 +40,7 @@ const char HTML_FOOT[] PROGMEM = R"rawliteral(
     </div>
 <script>
     $(document).ready (function () {
-        $.getJSON("https://api.github.com/repos/softwarecrash/DALY-BMS-to-MQTT/releases/latest", function() {
+        $.getJSON("https://api.github.com/repos/softwarecrash/Victron2MQTT/releases/latest", function() {
             })
             .done (function (data) {
             console.log("get data from github done success");
