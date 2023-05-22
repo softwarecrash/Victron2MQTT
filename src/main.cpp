@@ -190,7 +190,7 @@ void setup()
   AsyncWiFiManagerParameter custom_mqtt_topic("mqtt_topic", "MQTT Topic", NULL, 32);
   AsyncWiFiManagerParameter custom_mqtt_port("mqtt_port", "MQTT Port", NULL, 6);
   AsyncWiFiManagerParameter custom_mqtt_refresh("mqtt_refresh", "MQTT Send Interval", "300", 4);
-  AsyncWiFiManagerParameter custom_device_name("device_name", "Device Name", "EPEver2MQTT", 32);
+  AsyncWiFiManagerParameter custom_device_name("device_name", "Device Name", "Victron2MQTT", 32);
 
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_user);
@@ -201,7 +201,7 @@ void setup()
   wm.addParameter(&custom_device_name);
 
 
-  bool res = wm.autoConnect("EPEver2MQTT-AP");
+  bool res = wm.autoConnect("Victron2MQTT-AP");
 
   wm.setConnectTimeout(30);       // how long to try to connect for before continuing
   wm.setConfigPortalTimeout(120); // auto close configportal after n seconds
