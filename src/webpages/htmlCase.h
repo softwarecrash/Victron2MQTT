@@ -7,7 +7,7 @@ const char HTML_HEAD[] PROGMEM = R"rawliteral(
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
-<title>EPEVER 2 MQTT</title>
+<title>Victron 2 MQTT</title>
 <body>
     <noscript>
       <strong>We're sorry but it doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
@@ -17,7 +17,7 @@ const char HTML_HEAD[] PROGMEM = R"rawliteral(
 
 const char HTML_FOOT[] PROGMEM = R"rawliteral(
 <figure class="text-center">
-EPEver2MQTT <a id="software_version">%SOFTWARE_VERSION%</a> By <a href="https://github.com/softwarecrash/Victron2MQTT/" target="_blank">Softwarecrash</a>
+Victron2MQTT <a id="software_version">%SOFTWARE_VERSION%</a> By <a href="https://github.com/softwarecrash/Victron2MQTT/" target="_blank">Softwarecrash</a>
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://licensebuttons.net/l/by-nc-sa/4.0/80x15.png" /></a>
 </figure>
 </div>

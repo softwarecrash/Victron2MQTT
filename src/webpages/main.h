@@ -120,7 +120,7 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
     </div>
     <div class="col">
         <div class="bg-light form-check form-switch"><input class="form-check-input" type="checkbox" role="switch"
-                id="loadState" /></div>
+                id="loadState" disabled></div>
     </div>
 </div>
 <div class="d-grid gap-2">

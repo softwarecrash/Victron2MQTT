@@ -200,7 +200,6 @@ void setup()
   wm.addParameter(&custom_mqtt_refresh);
   wm.addParameter(&custom_device_name);
 
-
   bool res = wm.autoConnect("Victron2MQTT-AP");
 
   wm.setConnectTimeout(30);       // how long to try to connect for before continuing
@@ -291,11 +290,11 @@ void setup()
                 _settings._mqttJson = (request->arg("post_mqttjson") == "true") ? true : false;
                 _settings.save();
                 request->redirect("/reboot"); });
-
+/*
     server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
               {
       AsyncWebParameter *p = request->getParam(0);
-      /*
+      
       if (p->name() == "datetime")
       {
         uint8_t rtcSetY  = atoi (request->getParam("datetime")->value().substring(0, 2).c_str ());
@@ -314,9 +313,9 @@ void setup()
         epnode.writeMultipleRegisters(0x9013, 3); //write registers
       }
         }
-        */
+        
      request->send(200, "text/plain", "message received"); });
-
+*/
     server.on(
         "/update", HTTP_POST, [](AsyncWebServerRequest *request)
         {
@@ -390,13 +389,67 @@ bool getJsonData()
   liveJson["DEVICE_FREE_HEAP"] = ESP.getFreeHeap();
   liveJson["DEVICE_JSON_MEMORY"] = liveJson.memoryUsage();
   liveJson["ESP_VCC"] = ESP.getVcc() / 1000.0;
+  liveJson["WIFI_RSSI"] = WiFi.RSSI();
 
-    for ( int i = 0; i < myve.veEnd; i++ ) {
+  /*
+    liveData["SOLAR_VOLTS"] = (int)myve.veValue[5] / 1000.f;
+
+    liveData["SOLAR_AMPS"] = live.l.pI / 100.f;
+    liveData["SOLAR_WATTS"] = live.l.pP / 100.f;
+    */
+  liveData["BATT_VOLTS"] = (int)myve.veValue[3] / 1000.f;  // V mV
+  liveData["BATT_AMPS"] = (int)myve.veValue[4] / 1000.f;   // I mA
+  liveData["SOLAR_VOLTS"] = (int)myve.veValue[5] / 1000.f; // VPV mV
+  liveData["SOLAR_WATTS"] = (int)myve.veValue[6];          // PPV W
+  /*
+    liveData["BATT_AMPS"] = live.l.bI / 100.f;
+    liveData["BATT_WATTS"] = live.l.bP / 100.f;
+    liveData["LOAD_VOLTS"] = live.l.lV / 100.f;
+    liveData["LOAD_AMPS"] = live.l.lI / 100.f;
+    liveData["LOAD_WATTS"] = live.l.lP / 100.f;
+    liveData["BATTERY_SOC"] = batterySOC / 1.0f;
+    liveJson["BATTERY_TEMPERATURE"] = batteryTemperature / 100.f;
+    */
+  liveJson["LOAD_STATE"] = (strcmp(myve.veValue[11], "ON") == 0) ? true : false;
+
+  /*
+    statsData["SOLAR_MAX"] = stats.s.pVmax / 100.f;
+    statsData["SOLAR_MIN"] = stats.s.pVmin / 100.f;
+    statsData["BATT_MAX"] = stats.s.bVmax / 100.f;
+    statsData["BATT_MIN"] = stats.s.bVmin / 100.f;
+
+    statsData["CONS_ENERGY_DAY"] = stats.s.consEnerDay / 100.f;
+    statsData["CONS_ENGERY_MON"] = stats.s.consEnerMon / 100.f;
+    statsData["CONS_ENGERY_YEAR"] = stats.s.consEnerYear / 100.f;
+    statsData["CONS_ENGERY_TOT"] = stats.s.consEnerTotal / 100.f;
+    statsData["GEN_ENERGY_DAY"] = (int)myve.veValue[12] / 100.f;
+    statsData["GEN_ENERGY_MON"] = stats.s.genEnerMon / 100.f;
+    statsData["GEN_ENERGY_YEAR"] = stats.s.genEnerYear / 100.f;
+    */
+  statsData["GEN_ENERGY_TOT"] = (int)myve.veValue[12] / 100.f; // H19 0.01 kWh
+  statsData["GEN_ENERGY_DAY"] = (int)myve.veValue[13] / 100.f; // H20 0.01 kWh
+
+  statsData["MAX_POWER_DAY"] = (int)myve.veValue[14];                // H21 W
+  statsData["GEN_ENERGY_YESTERDAY"] = (int)myve.veValue[15] / 100.f; // H22 0.01 kWh
+  statsData["MAX_POWER_YESTERDAY"] = (int)myve.veValue[16];          // H23 W
+
+  statsData["DAY_NUMBER"] = (int)myve.veValue[17]; // HSDS Day Number
+  /*
+  statsData["CO2_REDUCTION"] = stats.s.c02Reduction / 100.f;
+
+  liveJson["BATT_VOLT_STATUS"] = batt_volt_status[status_batt.volt];
+  liveJson["BATT_TEMP"] = batt_temp_status[status_batt.temp];
+
+  liveJson["CHARGER_INPUT_STATUS"] = charger_input_status[charger_input];
+  liveJson["CHARGER_MODE"] = charger_charging_status[charger_mode];
+*/
+  for (int i = 0; i < myve.veEnd; i++)
+  {
     liveJson[myve.veName[i]] = myve.veValue[i];
     Serial.print(myve.veName[i]);
     Serial.print("= ");
-    Serial.println(myve.veValue[i]);    
-    }
+    Serial.println(myve.veValue[i]);
+  }
   return true;
 }
 
