@@ -290,32 +290,32 @@ void setup()
                 _settings._mqttJson = (request->arg("post_mqttjson") == "true") ? true : false;
                 _settings.save();
                 request->redirect("/reboot"); });
-/*
-    server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-      AsyncWebParameter *p = request->getParam(0);
-      
-      if (p->name() == "datetime")
-      {
-        uint8_t rtcSetY  = atoi (request->getParam("datetime")->value().substring(0, 2).c_str ());
-        uint8_t rtcSetM  = atoi (request->getParam("datetime")->value().substring(2, 4).c_str ());
-        uint8_t rtcSetD  = atoi (request->getParam("datetime")->value().substring(4, 6).c_str ());
-        uint8_t rtcSeth  = atoi (request->getParam("datetime")->value().substring(6, 8).c_str ());
-        uint8_t rtcSetm  = atoi (request->getParam("datetime")->value().substring(8, 10).c_str ());
-        uint8_t rtcSets  = atoi (request->getParam("datetime")->value().substring(10, 12).c_str ());
+    /*
+        server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
+                  {
+          AsyncWebParameter *p = request->getParam(0);
 
-      for (size_t i = 1; i < ((size_t)_settings._deviceQuantity+1); i++)
-      {
-        epnode.setSlaveId(i);
-        epnode.setTransmitBuffer(0, ((uint16_t)rtcSetm << 8) | rtcSets); // minute | secund
-        epnode.setTransmitBuffer(1, ((uint16_t)rtcSetD << 8) | rtcSeth); // day | hour
-        epnode.setTransmitBuffer(2, ((uint16_t)rtcSetY << 8) | rtcSetM); // year | month
-        epnode.writeMultipleRegisters(0x9013, 3); //write registers
-      }
-        }
-        
-     request->send(200, "text/plain", "message received"); });
-*/
+          if (p->name() == "datetime")
+          {
+            uint8_t rtcSetY  = atoi (request->getParam("datetime")->value().substring(0, 2).c_str ());
+            uint8_t rtcSetM  = atoi (request->getParam("datetime")->value().substring(2, 4).c_str ());
+            uint8_t rtcSetD  = atoi (request->getParam("datetime")->value().substring(4, 6).c_str ());
+            uint8_t rtcSeth  = atoi (request->getParam("datetime")->value().substring(6, 8).c_str ());
+            uint8_t rtcSetm  = atoi (request->getParam("datetime")->value().substring(8, 10).c_str ());
+            uint8_t rtcSets  = atoi (request->getParam("datetime")->value().substring(10, 12).c_str ());
+
+          for (size_t i = 1; i < ((size_t)_settings._deviceQuantity+1); i++)
+          {
+            epnode.setSlaveId(i);
+            epnode.setTransmitBuffer(0, ((uint16_t)rtcSetm << 8) | rtcSets); // minute | secund
+            epnode.setTransmitBuffer(1, ((uint16_t)rtcSetD << 8) | rtcSeth); // day | hour
+            epnode.setTransmitBuffer(2, ((uint16_t)rtcSetY << 8) | rtcSetM); // year | month
+            epnode.writeMultipleRegisters(0x9013, 3); //write registers
+          }
+            }
+
+         request->send(200, "text/plain", "message received"); });
+    */
     server.on(
         "/update", HTTP_POST, [](AsyncWebServerRequest *request)
         {
@@ -391,58 +391,21 @@ bool getJsonData()
   liveJson["ESP_VCC"] = ESP.getVcc() / 1000.0;
   liveJson["WIFI_RSSI"] = WiFi.RSSI();
 
-  /*
-    liveData["SOLAR_VOLTS"] = (int)myve.veValue[5] / 1000.f;
 
-    liveData["SOLAR_AMPS"] = live.l.pI / 100.f;
-    liveData["SOLAR_WATTS"] = live.l.pP / 100.f;
-    */
-  liveData["BATT_VOLTS"] = (int)myve.veValue[3] / 1000.f;  // V mV
-  liveData["BATT_AMPS"] = (int)myve.veValue[4] / 1000.f;   // I mA
-  liveData["SOLAR_VOLTS"] = (int)myve.veValue[5] / 1000.f; // VPV mV
-  liveData["SOLAR_WATTS"] = (int)myve.veValue[6];          // PPV W
-  /*
-    liveData["BATT_AMPS"] = live.l.bI / 100.f;
-    liveData["BATT_WATTS"] = live.l.bP / 100.f;
-    liveData["LOAD_VOLTS"] = live.l.lV / 100.f;
-    liveData["LOAD_AMPS"] = live.l.lI / 100.f;
-    liveData["LOAD_WATTS"] = live.l.lP / 100.f;
-    liveData["BATTERY_SOC"] = batterySOC / 1.0f;
-    liveJson["BATTERY_TEMPERATURE"] = batteryTemperature / 100.f;
-    */
+  liveData["BATT_VOLTS"] = atof(myve.veValue[3]) / 1000.f;  // V mV
+  liveData["BATT_AMPS"] = atof(myve.veValue[4]) / 1000.f;   // I mA
+  liveData["SOLAR_VOLTS"] = atof(myve.veValue[5]) / 1000.f; // VPV mV
+  liveData["SOLAR_WATTS"] = atof(myve.veValue[6]);          // PPV W
+
   liveJson["LOAD_STATE"] = (strcmp(myve.veValue[11], "ON") == 0) ? true : false;
+  statsData["GEN_ENERGY_TOT"] = atof(myve.veValue[12]) / 100.f; // H19 0.01 kWh
+  statsData["GEN_ENERGY_DAY"] = atof(myve.veValue[13]) / 100.f; // H20 0.01 kWh
+  statsData["MAX_POWER_DAY"] = atof(myve.veValue[14]);                // H21 W
+  statsData["GEN_ENERGY_YESTERDAY"] = atof(myve.veValue[15]) / 100.f; // H22 0.01 kWh
+  statsData["MAX_POWER_YESTERDAY"] = atof(myve.veValue[16]);          // H23 W
 
-  /*
-    statsData["SOLAR_MAX"] = stats.s.pVmax / 100.f;
-    statsData["SOLAR_MIN"] = stats.s.pVmin / 100.f;
-    statsData["BATT_MAX"] = stats.s.bVmax / 100.f;
-    statsData["BATT_MIN"] = stats.s.bVmin / 100.f;
-
-    statsData["CONS_ENERGY_DAY"] = stats.s.consEnerDay / 100.f;
-    statsData["CONS_ENGERY_MON"] = stats.s.consEnerMon / 100.f;
-    statsData["CONS_ENGERY_YEAR"] = stats.s.consEnerYear / 100.f;
-    statsData["CONS_ENGERY_TOT"] = stats.s.consEnerTotal / 100.f;
-    statsData["GEN_ENERGY_DAY"] = (int)myve.veValue[12] / 100.f;
-    statsData["GEN_ENERGY_MON"] = stats.s.genEnerMon / 100.f;
-    statsData["GEN_ENERGY_YEAR"] = stats.s.genEnerYear / 100.f;
-    */
-  statsData["GEN_ENERGY_TOT"] = (int)myve.veValue[12] / 100.f; // H19 0.01 kWh
-  statsData["GEN_ENERGY_DAY"] = (int)myve.veValue[13] / 100.f; // H20 0.01 kWh
-
-  statsData["MAX_POWER_DAY"] = (int)myve.veValue[14];                // H21 W
-  statsData["GEN_ENERGY_YESTERDAY"] = (int)myve.veValue[15] / 100.f; // H22 0.01 kWh
-  statsData["MAX_POWER_YESTERDAY"] = (int)myve.veValue[16];          // H23 W
-
-  statsData["DAY_NUMBER"] = (int)myve.veValue[17]; // HSDS Day Number
-  /*
-  statsData["CO2_REDUCTION"] = stats.s.c02Reduction / 100.f;
-
-  liveJson["BATT_VOLT_STATUS"] = batt_volt_status[status_batt.volt];
-  liveJson["BATT_TEMP"] = batt_temp_status[status_batt.temp];
-
-  liveJson["CHARGER_INPUT_STATUS"] = charger_input_status[charger_input];
-  liveJson["CHARGER_MODE"] = charger_charging_status[charger_mode];
-*/
+  statsData["DAY_NUMBER"] = atoi(myve.veValue[17]); // HSDS Day Number
+ 
   for (int i = 0; i < myve.veEnd; i++)
   {
     liveJson[myve.veName[i]] = myve.veValue[i];
@@ -488,45 +451,17 @@ bool sendtoMQTT()
 
   if (!_settings._mqttJson)
   {
-    /*
-    // mqttclient.publish((topic + "/" + mqttDeviceName + "/DEVICE_TIME").c_str(), String(uTime.getUnix()).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/DEVICE_TEMPERATURE").c_str(), String(deviceTemperature / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LOAD_STATE").c_str(), String(loadState ? "true" : "false").c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/BATT_VOLT_STATUS").c_str(), String(batt_volt_status[status_batt.volt]).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/BATT_TEMP").c_str(), String(batt_temp_status[status_batt.temp]).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/CHARGER_INPUT_STATUS").c_str(), String(charger_input_status[charger_input]).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/CHARGER_MODE").c_str(), String(charger_charging_status[charger_mode]).c_str());
-
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_VOLTS").c_str(), String(live.l.pV / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_AMPS").c_str(), String(live.l.pI / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_WATTS").c_str(), String(live.l.pP / 100.f).c_str());
-
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATT_VOLTS").c_str(), String(live.l.bV / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATT_AMPS").c_str(), String(live.l.bI / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATT_WATTS").c_str(), String(live.l.bP / 100.f).c_str());
-
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/LOAD_VOLTS").c_str(), String(live.l.lV / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/LOAD_AMPS").c_str(), String(live.l.lI / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/LOAD_WATTS").c_str(), String(live.l.lP / 100.f).c_str());
-
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATTERY_SOC").c_str(), String(batterySOC / 1.0f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATTERY_TEMPERATURE").c_str(), String(batteryTemperature / 100.f).c_str());
-
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/SOLAR_MAX").c_str(), String(stats.s.pVmax / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/SOLAR_MIN").c_str(), String(stats.s.pVmin / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/BATT_MAX").c_str(), String(stats.s.bVmax / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/BATT_MIN").c_str(), String(stats.s.bVmin / 100.f).c_str());
-
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/CONS_ENERGY_DAY").c_str(), String(stats.s.consEnerDay / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/CONS_ENGERY_MON").c_str(), String(stats.s.consEnerMon / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/CONS_ENGERY_YEAR").c_str(), String(stats.s.consEnerYear / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/CONS_ENGERY_TOT").c_str(), String(stats.s.consEnerTotal / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/GEN_ENERGY_DAY").c_str(), String(stats.s.genEnerDay / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/GEN_ENERGY_MON").c_str(), String(stats.s.genEnerMon / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/GEN_ENERGY_YEAR").c_str(), String(stats.s.genEnerYear / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/GEN_ENERGY_TOT").c_str(), String(stats.s.genEnerTotal / 100.f).c_str());
-    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/CO2_REDUCTION").c_str(), String(stats.s.c02Reduction / 100.f).c_str());
-    */
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_VOLTS").c_str(), String(atof(myve.veValue[5]) / 1000.f).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_WATTS").c_str(), String(atof(myve.veValue[6])).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATT_VOLTS").c_str(), String(atof(myve.veValue[3]) / 1000.f).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATT_AMPS").c_str(), String(atof(myve.veValue[4]) / 1000.f).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/LOAD_STATE").c_str(), String((strcmp(myve.veValue[11], "ON") == 0) ? "true" : "false").c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/GEN_ENERGY_TOT").c_str(), String(atof(myve.veValue[12]) / 100.f).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/GEN_ENERGY_DAY").c_str(), String(atof(myve.veValue[13]) / 100.f).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/MAX_POWER_DAY").c_str(), String(atof(myve.veValue[14])).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/GEN_ENERGY_YESTERDAY").c_str(), String(atof(myve.veValue[15]) / 100.f).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/MAX_POWER_YESTERDAY").c_str(), String(atoi(myve.veValue[16])).c_str());
+    mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/DAY_NUMBER").c_str(), String(atoi(myve.veValue[17])).c_str());
   }
   else
   {

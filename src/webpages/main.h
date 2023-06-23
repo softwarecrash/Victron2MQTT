@@ -152,41 +152,17 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
 
         document.getElementById("devicename").innerHTML = data.DEVICE_NAME == null ? 'No Connection' : 'Device: ' + data.DEVICE_NAME;
 
-        document.getElementById("devtime").innerHTML = unixTimetoDateTime(data.DEVICE_TIME);
-
         document.getElementById("solarV").innerHTML = data.LiveData.SOLAR_VOLTS + 'V ';
-        document.getElementById("solarA").innerHTML = data.LiveData.SOLAR_AMPS + 'A  ';
         document.getElementById("solarW").innerHTML = data.LiveData.SOLAR_WATTS + 'W  ';
-        document.getElementById("battSOC").innerHTML = data.LiveData.BATTERY_SOC + '%%';
 
         document.getElementById("battV").innerHTML = data.LiveData.BATT_VOLTS + 'V ';
         document.getElementById("battA").innerHTML = data.LiveData.BATT_AMPS + 'A  ';
-        document.getElementById("battW").innerHTML = data.LiveData.BATT_WATTS + 'W  ';
-
-        document.getElementById("loadV").innerHTML = data.LiveData.LOAD_VOLTS + 'V ';
-        document.getElementById("loadA").innerHTML = data.LiveData.LOAD_AMPS + 'A  ';
-        document.getElementById("loadW").innerHTML = data.LiveData.LOAD_WATTS + 'W  ';
-
-        document.getElementById("deviceTemp").innerHTML = data.DEVICE_TEMPERATURE + '°C  ';
-        if(data.BATTERY_TEMPERATURE != 25){
-        document.getElementById("battTemp").innerHTML = ' | ' + data.BATTERY_TEMPERATURE + '°C  ';
-        }
-        document.getElementById("consD").innerHTML = 'D:' + data.StatsData.CONS_ENERGY_DAY + '  ';
-        document.getElementById("consM").innerHTML = 'M:' + data.StatsData.CONS_ENGERY_MON + '  ';
-        document.getElementById("consY").innerHTML = 'Y:' + data.StatsData.CONS_ENGERY_YEAR + '  ';
-        document.getElementById("consT").innerHTML = 'T:' + data.StatsData.CONS_ENGERY_TOT;
 
         document.getElementById("genD").innerHTML = 'D:' + data.StatsData.GEN_ENERGY_DAY + '  ';
-        document.getElementById("genM").innerHTML = 'M:' + data.StatsData.GEN_ENERGY_MON + '  ';
-        document.getElementById("genY").innerHTML = 'Y:' + data.StatsData.GEN_ENERGY_YEAR + '  ';
         document.getElementById("genT").innerHTML = 'T:' + data.StatsData.GEN_ENERGY_TOT;
 
-        document.getElementById("cored").innerHTML = data.StatsData.CO2_REDUCTION + 't ';
-
-        document.getElementById("inputstate").innerHTML = data.CHARGER_INPUT_STATUS;
-        document.getElementById("chrgmode").innerHTML = data.CHARGER_MODE;
-
         document.getElementById("loadState").checked = data.LOAD_STATE;
+
         invQuantity = data.DEVICE_QUANTITY;
             if(invQuantity <= 1){
             document.getElementById('prevInv').style.visibility = 'hidden';
