@@ -4,7 +4,7 @@
   Waveing LED = Relais On
   every 5 seconds:
   1x all ok - Working
-  2x no BMS Connection
+  2x no Device Connection
   3x no MQTT Connection
   4x no WiFi Connection
 
@@ -26,7 +26,7 @@ void notificationLED()
       ledState = 4;
     else if (!mqttclient.connected() && _settings._mqttServer != "")
       ledState = 3;
-    else if (errorcode != 0)
+    else if (strcmp(myve.veValue[0], "") == 0)
       ledState = 2;
     else if (WiFi.status() == WL_CONNECTED && mqttclient.connected() && errorcode == 0)
       ledState = 1;
