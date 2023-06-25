@@ -398,6 +398,7 @@ bool getJsonData()
   liveData["SOLAR_WATTS"] = atof(myve.veValue[6]);          // PPV W
 
   liveJson["LOAD_STATE"] = (strcmp(myve.veValue[11], "ON") == 0) ? true : false;
+  
   statsData["GEN_ENERGY_TOT"] = atof(myve.veValue[12]) / 100.f; // H19 0.01 kWh
   statsData["GEN_ENERGY_DAY"] = atof(myve.veValue[13]) / 100.f; // H20 0.01 kWh
   statsData["MAX_POWER_DAY"] = atof(myve.veValue[14]);                // H21 W

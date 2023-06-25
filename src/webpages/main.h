@@ -7,21 +7,13 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
 </div>
 
 <div class="row gx-0 mb-2">
-<div class="col">
-<button id="prevInv" type="button" class="btn btn-primary">&#8882;</button>
-</div>
-<div class="col-9">
-<figure class="text-center">
-    <h3 id="devicename"></h3>
-</figure>
-</div>
-<div class="col">
-<button id="nextInv" type="button" class="btn btn-primary" style="float: right;">&#8883;</button>
-</div>
+    <figure class="text-center">
+        <h3 id="devicename"></h3>
+    </figure>
 </div>
 
 
-<div class="row gx-0 mb-2">
+<div class="row gx-0 mb-2" id="devtime">
     <div class="col">
         <div class="bg-light">Device Time: </div>
     </div>
@@ -30,7 +22,7 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
     </div>
 </div>
 
-<div class="row gx-0 mb-2">
+<div class="row gx-0 mb-2" id="solar">
     <div class="col">
         <div class="bg-light">Solar: </div>
     </div>
@@ -150,10 +142,20 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
     function onMessage(event) {
         var data = JSON.parse(event.data);
 
-        document.getElementById("devicename").innerHTML = data.DEVICE_NAME == null ? 'No Connection' : 'Device: ' + data.DEVICE_NAME;
 
+//https://stackoverflow.com/questions/20804163/check-if-a-key-exists-inside-a-json-object
+
+        document.getElementById("devicename").innerHTML = data.DEVICE_NAME == null ? 'No Connection' : data.DEVICE_NAME;
+    
+if("SOLAR_VOLTS" in data.LiveData && "SOLAR_WATTS" in data.LiveData){ 
         document.getElementById("solarV").innerHTML = data.LiveData.SOLAR_VOLTS + 'V ';
         document.getElementById("solarW").innerHTML = data.LiveData.SOLAR_WATTS + 'W  ';
+} else {
+    document.getElementById("solar").style.display = 'none';
+}
+
+//working
+document.getElementById("devtime").style.display = 'none';
 
         document.getElementById("battV").innerHTML = data.LiveData.BATT_VOLTS + 'V ';
         document.getElementById("battA").innerHTML = data.LiveData.BATT_AMPS + 'A  ';
@@ -163,11 +165,6 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
 
         document.getElementById("loadState").checked = data.LOAD_STATE;
 
-        invQuantity = data.DEVICE_QUANTITY;
-            if(invQuantity <= 1){
-            document.getElementById('prevInv').style.visibility = 'hidden';
-            document.getElementById('nextInv').style.visibility = 'hidden';
-        }
         if (data.ESP_VCC < 2.6) {
             document.getElementById("vcc_alert").style.display = '';
         }else{
@@ -183,9 +180,6 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(
 
     function initButton() {
         document.getElementById('loadState').addEventListener('click', LoadSwitch);
-
-        document.getElementById('prevInv').addEventListener('click', SelInvp);
-        document.getElementById('nextInv').addEventListener('click', SelInvn);
     }
 
 
