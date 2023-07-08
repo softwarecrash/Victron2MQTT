@@ -37,14 +37,6 @@ const char HTML_SETTINGS_EDIT[] PROGMEM = R"rawliteral(
         <input type="text" class="form-control" aria-describedby="mqttrefreshdesc" id="mqttrefresh" maxlength="5"
             name="post_mqttRefresh" value="%MQTT_REFRESH%">
     </div>
-    <div class="input-group mb-3">
-        <span class="input-group-text w-50" id="mqttjsondesc">MQTT Json Style</span>
-        <div class="form-switch form-control mqtt-settings-switch" style="width:50%%; text-align: center;">
-            <input type="checkbox" class="form-check-input form control" aria-describedby="mqttjsondesc"
-                role="switch" id="mqttjson" name="post_mqttjson" value="true" %MQTT_JSON%>
-        </div>
-    </div>
-
 
 <div class="d-grid gap-2">
 <input class="btn btn-primary" type="submit" value="Save settings">

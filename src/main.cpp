@@ -290,32 +290,7 @@ void setup()
                 _settings._mqttJson = (request->arg("post_mqttjson") == "true") ? true : false;
                 _settings.save();
                 request->redirect("/reboot"); });
-    /*
-        server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
-                  {
-          AsyncWebParameter *p = request->getParam(0);
 
-          if (p->name() == "datetime")
-          {
-            uint8_t rtcSetY  = atoi (request->getParam("datetime")->value().substring(0, 2).c_str ());
-            uint8_t rtcSetM  = atoi (request->getParam("datetime")->value().substring(2, 4).c_str ());
-            uint8_t rtcSetD  = atoi (request->getParam("datetime")->value().substring(4, 6).c_str ());
-            uint8_t rtcSeth  = atoi (request->getParam("datetime")->value().substring(6, 8).c_str ());
-            uint8_t rtcSetm  = atoi (request->getParam("datetime")->value().substring(8, 10).c_str ());
-            uint8_t rtcSets  = atoi (request->getParam("datetime")->value().substring(10, 12).c_str ());
-
-          for (size_t i = 1; i < ((size_t)_settings._deviceQuantity+1); i++)
-          {
-            epnode.setSlaveId(i);
-            epnode.setTransmitBuffer(0, ((uint16_t)rtcSetm << 8) | rtcSets); // minute | secund
-            epnode.setTransmitBuffer(1, ((uint16_t)rtcSetD << 8) | rtcSeth); // day | hour
-            epnode.setTransmitBuffer(2, ((uint16_t)rtcSetY << 8) | rtcSetM); // year | month
-            epnode.writeMultipleRegisters(0x9013, 3); //write registers
-          }
-            }
-
-         request->send(200, "text/plain", "message received"); });
-    */
     server.on(
         "/update", HTTP_POST, [](AsyncWebServerRequest *request)
         {
@@ -452,6 +427,10 @@ bool sendtoMQTT()
 
   if (!_settings._mqttJson)
   {
+      for (int i = 0; i < myve.veEnd; i++)
+  {
+     mqttclient.publish((topic + "/" + mqttDeviceName + "/"+myve.veValue[i]).c_str(), myve.veValue[i]);
+  }
     mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_VOLTS").c_str(), String(atof(myve.veValue[5]) / 1000.f).c_str());
     mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_WATTS").c_str(), String(atof(myve.veValue[6])).c_str());
     mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATT_VOLTS").c_str(), String(atof(myve.veValue[3]) / 1000.f).c_str());
