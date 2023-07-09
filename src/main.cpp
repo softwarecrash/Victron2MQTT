@@ -429,8 +429,9 @@ bool sendtoMQTT()
   {
       for (int i = 0; i < myve.veEnd; i++)
   {
-     mqttclient.publish((topic + "/" + mqttDeviceName + "/"+myve.veValue[i]).c_str(), myve.veValue[i]);
+     mqttclient.publish((topic + "/" + mqttDeviceName + "/"+myve.veName[i]).c_str(), myve.veValue[i]);
   }
+  /*
     mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_VOLTS").c_str(), String(atof(myve.veValue[5]) / 1000.f).c_str());
     mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/SOLAR_WATTS").c_str(), String(atof(myve.veValue[6])).c_str());
     mqttclient.publish((topic + "/" + mqttDeviceName + "/LiveData/BATT_VOLTS").c_str(), String(atof(myve.veValue[3]) / 1000.f).c_str());
@@ -442,6 +443,7 @@ bool sendtoMQTT()
     mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/GEN_ENERGY_YESTERDAY").c_str(), String(atof(myve.veValue[15]) / 100.f).c_str());
     mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/MAX_POWER_YESTERDAY").c_str(), String(atoi(myve.veValue[16])).c_str());
     mqttclient.publish((topic + "/" + mqttDeviceName + "/StatsData/DAY_NUMBER").c_str(), String(atoi(myve.veValue[17])).c_str());
+    */
   }
   else
   {
