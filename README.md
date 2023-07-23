@@ -28,6 +28,8 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 - surf to 192.168.4.1 and set up your wifi and optional MQTT
 - that's it :)
 
+#[Love it? Buy me a Coffee](custom: ['https://donate.softwarecrash.de'])
+
 # Questions? 
 [Join the Discord Channel (German / English)](https://discord.gg/WeWs7BwZQr)
 # 
