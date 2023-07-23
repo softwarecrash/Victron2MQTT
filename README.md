@@ -36,7 +36,7 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 <img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174">
 ![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/default-orange.png)(https://donate.softwarecrash.de)
 
-[<img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"/>](https://www.google.com/)(https://donate.softwarecrash.de)
+[<img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"/>](https://donate.softwarecrash.de)
 
 # 
 [![LICENSE](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
