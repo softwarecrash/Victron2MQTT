@@ -19,6 +19,7 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 
 
 # Connection to Victron:
+![Victron Pinout MQTT-Projekt](https://github.com/softwarecrash/Victron2MQTT/assets/17761850/27f7120b-f118-4969-8f6f-53af4bb6eaff)
 
 
 # How to use:
