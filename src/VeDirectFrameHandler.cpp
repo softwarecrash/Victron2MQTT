@@ -61,7 +61,7 @@ VeDirectFrameHandler::VeDirectFrameHandler() :
  */
 void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
-	Serial.print((char)inbyte);
+	//Serial.print((char)inbyte);
 	//if (mStop) return;
 	if ( (inbyte == ':') && (mState != CHECKSUM) ) {
 		mState = RECORD_HEX;
@@ -133,7 +133,7 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 	case CHECKSUM:
 	{
 		bool valid = mChecksum == 0;
-		Serial.println(mChecksum);
+		//Serial.println(mChecksum);
 		if (!valid)
 			logE(MODULE,"[CHECKSUM] Invalid frame");
 		mChecksum = 0;
@@ -145,6 +145,7 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 		if (hexRxEvent(inbyte)) {
 			mChecksum = 0;
 			mState = IDLE;
+			//here put in a callback later
 		}
 		break;
 	}
@@ -188,6 +189,7 @@ void VeDirectFrameHandler::frameEndEvent(bool valid) {
 		}
 	}
 	frameIndex = 0;	// reset frame
+	requestCallback();
 }
 
 /*
@@ -208,4 +210,9 @@ void VeDirectFrameHandler::logE(char * module, char * error) {
  */
 bool VeDirectFrameHandler::hexRxEvent(uint8_t inbyte) {
 	return true;		// stubbed out for future
+}
+
+void VeDirectFrameHandler::callback(std::function<void()> func) // callback function when finnish request
+{
+    requestCallback = func;
 }

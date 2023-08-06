@@ -22,6 +22,8 @@ class VeDirectFrameHandler {
 public:
     VeDirectFrameHandler();
     void rxData(uint8_t inbyte);                // byte of serial data to be passed by the application
+    void callback(std::function<void()> func);  // callback function
+    std::function<void()> requestCallback;
 
     char veName[buffLen][nameLen] = { };        // public buffer for received names
     char veValue[buffLen][valueLen] = { };      // public buffer for received values

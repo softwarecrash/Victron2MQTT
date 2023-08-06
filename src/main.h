@@ -31,6 +31,12 @@ bool getJsonData();
 
 void notifyClients();
 
-void callback(char *top, byte *payload, unsigned int length);
+void mqttCallback(char *top, byte *payload, unsigned int length);
 
 bool sendtoMQTT();
+
+/**
+ * @brief function for uart callback to prozess avaible data
+ * 
+ */
+void prozessData();

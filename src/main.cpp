@@ -15,8 +15,9 @@
 #include <ESPAsyncWebServer.h>
 #include <UnixTime.h>
 #include <WebSerialLite.h>
-#include <VeDirectFrameHandler.h>
 #include <SoftwareSerial.h>
+
+#include "VeDirectFrameHandler.h"
 #include "Settings.h" //settings functions
 
 #include "html.h"          //the HTML content
@@ -106,7 +107,7 @@ void notifyClients()
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
-  
+
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
@@ -205,8 +206,8 @@ void ReadVEData()
   while (veSerial.available())
   {
     myve.rxData(veSerial.read());
+    esp_yield();
   }
-  yield();
 }
 
 void setup()
@@ -220,6 +221,7 @@ void setup()
 
   veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX, MYPORT_TX, false);
   veSerial.flush();
+  myve.callback(prozessData);
 
   Serial.begin(DEBUG_BAUD);
 
@@ -268,7 +270,7 @@ void setup()
 
   topic = _settings.data.mqttTopic;
   mqttclient.setServer(_settings.data.mqttServer, _settings.data.mqttPort);
-  mqttclient.setCallback(callback);
+  mqttclient.setCallback(mqttCallback);
   mqttclient.setBufferSize(MQTT_BUFFER);
   // check is WiFi connected
 
@@ -337,33 +339,33 @@ void setup()
                 strncpy(_settings.data.mqttTriggerPath, request->arg("post_mqtttrigger").c_str(), 80);
                 _settings.save();
                 request->redirect("/reboot"); });
-/*
-    server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-      AsyncWebParameter *p = request->getParam(0);
-     
-      if (p->name() == "datetime")
-      {
-        uint8_t rtcSetY  = atoi (request->getParam("datetime")->value().substring(0, 2).c_str ());
-        uint8_t rtcSetM  = atoi (request->getParam("datetime")->value().substring(2, 4).c_str ());
-        uint8_t rtcSetD  = atoi (request->getParam("datetime")->value().substring(4, 6).c_str ());
-        uint8_t rtcSeth  = atoi (request->getParam("datetime")->value().substring(6, 8).c_str ());
-        uint8_t rtcSetm  = atoi (request->getParam("datetime")->value().substring(8, 10).c_str ());
-        uint8_t rtcSets  = atoi (request->getParam("datetime")->value().substring(10, 12).c_str ());
+    /*
+        server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
+                  {
+          AsyncWebParameter *p = request->getParam(0);
 
-      for (size_t i = 1; i <= ((size_t)_settings.data.deviceQuantity); i++)
-      {
-        epnode.setSlaveId(i);
-        epnode.setTransmitBuffer(0, ((uint16_t)rtcSetm << 8) | rtcSets); // minute | secund
-        epnode.setTransmitBuffer(1, ((uint16_t)rtcSetD << 8) | rtcSeth); // day | hour
-        epnode.setTransmitBuffer(2, ((uint16_t)rtcSetY << 8) | rtcSetM); // year | month
-        epnode.writeMultipleRegisters(0x9013, 3); //write registers
-        delay(50);
-      }
-        }
-        
-     request->send(200, "text/plain", "message received"); });
-*/
+          if (p->name() == "datetime")
+          {
+            uint8_t rtcSetY  = atoi (request->getParam("datetime")->value().substring(0, 2).c_str ());
+            uint8_t rtcSetM  = atoi (request->getParam("datetime")->value().substring(2, 4).c_str ());
+            uint8_t rtcSetD  = atoi (request->getParam("datetime")->value().substring(4, 6).c_str ());
+            uint8_t rtcSeth  = atoi (request->getParam("datetime")->value().substring(6, 8).c_str ());
+            uint8_t rtcSetm  = atoi (request->getParam("datetime")->value().substring(8, 10).c_str ());
+            uint8_t rtcSets  = atoi (request->getParam("datetime")->value().substring(10, 12).c_str ());
+
+          for (size_t i = 1; i <= ((size_t)_settings.data.deviceQuantity); i++)
+          {
+            epnode.setSlaveId(i);
+            epnode.setTransmitBuffer(0, ((uint16_t)rtcSetm << 8) | rtcSets); // minute | secund
+            epnode.setTransmitBuffer(1, ((uint16_t)rtcSetD << 8) | rtcSeth); // day | hour
+            epnode.setTransmitBuffer(2, ((uint16_t)rtcSetY << 8) | rtcSetM); // year | month
+            epnode.writeMultipleRegisters(0x9013, 3); //write registers
+            delay(50);
+          }
+            }
+
+         request->send(200, "text/plain", "message received"); });
+    */
     server.on(
         "/update", HTTP_POST, [](AsyncWebServerRequest *request)
         {
@@ -397,18 +399,11 @@ void setup()
 //----------------------------------------------------------------------
 void loop()
 {
-  
+
   // Make sure wifi is in the right mode
   if (WiFi.status() == WL_CONNECTED)
-  {                      // No use going to next step unless WIFI is up and running.
-
-  //ReadVEData();
-
-    while (veSerial.available())
-  {
-    myve.rxData(veSerial.read());
-  esp_yield();
-}
+  { // No use going to next step unless WIFI is up and running.
+    ReadVEData();
 
     ws.cleanupClients(); // clean unused client connections
     // MDNS.update();
@@ -440,6 +435,11 @@ void loop()
   notificationLED(); // notification LED routine
 }
 // End void loop
+
+void prozessData()
+{
+  Serial.println("callback fired");
+}
 
 bool getEpData()
 {
@@ -577,7 +577,7 @@ bool sendtoMQTT()
   return true;
 }
 
-void callback(char *top, byte *payload, unsigned int length) // Need rework
+void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
 {
   updateProgress = true; // stop servicing data
   if (!_settings.data.mqttJson)
