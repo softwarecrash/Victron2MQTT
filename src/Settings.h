@@ -1,134 +1,116 @@
-//Settings: Stores persistant settings, loads and saves to EEPROM
+// Settings: Stores persistant settings, loads and saves to EEPROM
 
 #include <Arduino.h>
 #include <EEPROM.h>
 
+#define EEPROM_SIZE 1024
+
 class Settings
 {
+  // change eeprom config version ONLY when new parameter is added and need reset the parameter
+  unsigned int configVersion = 10;
+
 public:
-  bool _valid = false;
-  //MQTT Settings
-  bool _mqttJson = false;
-  String _deviceName = "";    //name of the device
-  String _mqttServer = "";    //host or ip from the mqtt server
-  String _mqttUser = "";      //mqtt username to login
-  String _mqttPassword = "";  //mqtt passwort
-  String _mqttTopic = "";     //MQTT Topic
-  short _mqttPort = 0;        //mqtt server port
-  short _mqttRefresh = 0;     //mqtt Send Interval in Seconds
-
-  short readShort(int offset)
-  {
-    byte b1 = EEPROM.read(offset + 0);
-    byte b2 = EEPROM.read(offset + 1);
-    return ((short)b1 << 8) | b2;
-  }
-
-  void writeShort(short value, int offset)
-  {
-    byte b1 = (byte)((value >> 8) & 0xFF);
-    byte b2 = (byte)((value >> 0) & 0xFF);
-
-    EEPROM.write(offset + 0, b1);
-    EEPROM.write(offset + 1, b2);
-  }
-
-  void readString(String &s, int maxLen, int offset)
-  {
-    int i;
-    s = "";
-    for (i = 0; i < maxLen; ++i)
-    {
-      char c = EEPROM.read(offset + i);
-      if (c == 0)
-        break;
-      s += c;
-    }
-  }
-
-  void writeString(String &s, int maxLen, int offset)
-  {
-    int i;
-    //leave space for null termination
-    maxLen--;
-    if ((int)s.length() < maxLen - 1)
-      maxLen = s.length();
-
-    for (i = 0; i < maxLen; ++i)
-    {
-      EEPROM.write(offset + i, s[i]);
-    }
-    //null terminate the string
-    EEPROM.write(offset + i, 0);
-  }
+  String deviceNameStr;
+  struct Data
+  {                              // do not re-sort this struct
+    unsigned int coVers;         // config version, if changed, previus config will erased
+    char deviceName[40];         // device name
+    char mqttServer[40];         // mqtt Server adress
+    char mqttUser[40];           // mqtt Username
+    char mqttPassword[40];       // mqtt Password
+    char mqttTopic[40];          // mqtt publish topic
+    char mqttTriggerPath[80];    // MQTT Data Trigger Path
+    unsigned int mqttPort;       // mqtt port
+    unsigned int mqttRefresh;    // mqtt refresh time
+    bool mqttJson;               // switch between classic mqtt and json
+  } data;
 
   void load()
   {
-    EEPROM.begin(512);
-
-    _valid = true;
-    _valid &= EEPROM.read(0) == 0xDB;
-    _valid &= EEPROM.read(1) == 0xEE;
-    _valid &= EEPROM.read(2) == 0xAE;
-    _valid &= EEPROM.read(3) == 0xDF;
-
-    if (_valid)
-    {
-      _mqttRefresh = readShort(0x20);
-      readString(_mqttTopic, 0x20, 0x40);
-      if(readShort(0x60) == 10) _mqttJson = true; //remove when rework
-      if(readShort(0x60) == 00) _mqttJson = false; //remove when rework
-      readString(_deviceName, 0x20, 0x80);
-      readString(_mqttServer, 0x20, 0xA0);
-      readString(_mqttPassword, 0x20, 0xC0);
-      readString(_mqttUser, 0x20, 0xE0);
-      _mqttPort = readShort(0x100);
-    }
-
+    data = {}; // clear bevor load data
+    EEPROM.begin(EEPROM_SIZE);
+    EEPROM.get(0, data);
     EEPROM.end();
+    coVersCheck();
+    sanitycheck();
+    deviceNameStr = data.deviceName;
   }
 
   void save()
   {
-    EEPROM.begin(512);
-
-    EEPROM.write(0, 0xDB);
-    EEPROM.write(1, 0xEE);
-    EEPROM.write(2, 0xAE);
-    EEPROM.write(3, 0xDF);
-
-    writeShort(_mqttRefresh, 0x20);
-    writeString(_mqttTopic, 0x20, 0x40);
-    if(_mqttJson == true) writeShort((10), 0x60); //remove when rework
-    if(_mqttJson == false) writeShort((00), 0x60); //remove when rework
-    writeString(_deviceName, 0x20, 0x80);
-    writeString(_mqttServer, 0x20, 0xA0);
-    writeString(_mqttPassword, 0x20, 0xC0);
-    writeString(_mqttUser, 0x20, 0xE0);
-    writeShort(_mqttPort, 0x100);
-
+    sanitycheck();
+    EEPROM.begin(EEPROM_SIZE);
+    EEPROM.put(0, data);
     EEPROM.commit();
-
-    _valid = true;
-
     EEPROM.end();
   }
 
-  void reset(){
-  _deviceName = "";
-  _mqttServer = "";
-  _mqttUser = "";
-  _mqttPassword = "";
-  _mqttTopic = "";
-  _mqttPort = 0;
-  _mqttRefresh = 0;
-  _mqttJson = false;
-  save();
-  delay(500);
+  void reset()
+  {
+    data = {};
+    save();
   }
 
-  Settings()
+private:
+  // check the variables from eeprom
+
+  void sanitycheck()
   {
-    load();
+    if (strlen(data.deviceName) == 0 || strlen(data.deviceName) >= 40)
+    {
+      strcpy(data.deviceName, "Victron2MQTT");
+    }
+    if (strlen(data.mqttServer) == 0 || strlen(data.mqttServer) >= 40)
+    {
+      strcpy(data.mqttServer, "");
+    }
+    if (strlen(data.mqttUser) == 0 || strlen(data.mqttUser) >= 40)
+    {
+      strcpy(data.mqttUser, "");
+    }
+    if (strlen(data.mqttPassword) == 0 || strlen(data.mqttPassword) >= 40)
+    {
+      strcpy(data.mqttPassword, "");
+    }
+    if (strlen(data.mqttTopic) == 0 || strlen(data.mqttTopic) >= 40)
+    {
+      strcpy(data.mqttTopic, "Victron");
+    }
+    if (data.mqttPort <= 0 || data.mqttPort >= 65530)
+    {
+      data.mqttPort = 0;
+    }
+    if (data.mqttRefresh <= 1 || data.mqttRefresh >= 65530)
+    {
+      data.mqttRefresh = 0;
+    }
+    if (data.mqttJson && !data.mqttJson)
+    {
+      data.mqttJson = false;
+    }
+    if (strlen(data.mqttTriggerPath) == 0 || strlen(data.mqttTriggerPath) >= 80)
+    {
+      strcpy(data.mqttTriggerPath, "");
+    }
+  }
+  void coVersCheck()
+  {
+    if (data.coVers != configVersion)
+    {
+      data.coVers = configVersion;
+      strcpy(data.deviceName, "Victron2MQTT");
+      strcpy(data.mqttServer, "");
+      strcpy(data.mqttUser, "");
+      strcpy(data.mqttPassword, "");
+      strcpy(data.mqttTopic, "Victron");
+      strcpy(data.mqttTriggerPath, "");
+      data.mqttPort = 0;
+      data.mqttRefresh = 300;
+      data.mqttJson = false;
+
+      save();
+      load();
+    }
   }
 };

@@ -1,0 +1,66 @@
+%pre_head_template%
+<figure class="text-center">
+    <h1>Edit Configuration</h1>
+</figure>
+<form method="POST" action="/settingssave" enctype="multipart/form-data">
+    <div class="input-group mb-3">
+        <span class="input-group-text w-50" id="devicenamedesc">Device Name</span>
+        <input type="text" class="form-control" aria-describedby="devicenamedesc" id="devicename" name="post_deviceName"
+            maxlength="35" value="%pre_device_name%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="devicequantitydesc">Device Quantity</span>
+        <input type="text" class="form-control" aria-describedby="devicequantitydesc" id="devicequantity"
+            name="post_deviceQuanttity" maxlength="2" value="%pre_device_quantity%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="mqttserverdesc">MQTT Server</span>
+        <input type="text" class="form-control" aria-describedby="mqttserverdesc" id="mqttserver" name="post_mqttServer"
+            maxlength="35" value="%pre_mqtt_server%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="mqttportdesc">MQTT Port</span>
+        <input type="text" class="form-control" aria-describedby="mqttportdesc" id="mqttport" name="post_mqttPort"
+            maxlength="5" value="%pre_mqtt_port%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="mqttuserdesc">MQTT User</span>
+        <input type="text" class="form-control" aria-describedby="mqttuserdesc" id="mqttuser" name="post_mqttUser"
+            maxlength="35" value="%pre_mqtt_user%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="mqttpassworddesc">MQTT Password</span>
+        <input type="password" class="form-control" aria-describedby="mqttpassworddesc" id="mqttpassword" maxlength="35"
+            name="post_mqttPassword" value="%pre_mqtt_pass%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="mqtttopicdesc">MQTT Topic</span>
+        <input type="text" class="form-control" aria-describedby="mqtttopicdesc" id="mqtttopic" name="post_mqttTopic"
+            maxlength="35" value="%pre_mqtt_topic%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="mqttrefreshdesc">MQTT Refresh (sec)</span>
+        <input type="text" class="form-control" aria-describedby="mqttrefreshdesc" id="mqttrefresh" maxlength="5"
+            name="post_mqttRefresh" value="%pre_mqtt_refresh%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="mqtttriggerdesc">MQTT Data Trigger Path</span>
+        <input type="text" class="form-control" aria-describedby="mqtttrigerdesc" id="mqtttrigger" maxlength="80"
+            name="post_mqtttrigger" value="%pre_mqtt_mqtttrigger%">
+    </div>
+    <div class="input-group mb-3">
+        <span class="input-group-text w-50" id="mqttjsondesc">MQTT Json Style</span>
+        <div class="form-switch form-control mqtt-settings-switch" style="width:50%%; text-align: center;">
+            <input type="checkbox" class="form-check-input form control" aria-describedby="mqttjsondesc" role="switch"
+                id="mqttjson" name="post_mqttjson" value="true" %pre_mqtt_json%>
+        </div>
+    </div>
+
+
+    <div class="d-grid gap-2">
+        <input class="btn btn-primary" type="submit" value="Save settings">
+</form>
+<a class="btn btn-primary" href="/settings" role="button">Back</a>
+</div>
+%pre_foot_template%
+<p hidden>Hidden Helper</p>

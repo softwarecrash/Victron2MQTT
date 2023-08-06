@@ -24,7 +24,7 @@ void notificationLED()
   {
     if (WiFi.status() != WL_CONNECTED)
       ledState = 4;
-    else if (!mqttclient.connected() && _settings._mqttServer != "")
+    else if (!mqttclient.connected() && strlen(_settings.data.mqttServer) > 0)
       ledState = 3;
     else if (strcmp(myve.veValue[0], "") == 0)
       ledState = 2;
