@@ -438,6 +438,7 @@ void loop()
 
 void prozessData()
 {
+  getJsonData();
   Serial.println("callback fired");
 }
 
