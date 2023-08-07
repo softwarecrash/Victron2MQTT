@@ -32,6 +32,7 @@ String topic = ""; // Default first part of topic. We will add device ID in setu
 bool shouldSaveConfig = false;
 bool restartNow = false;
 bool updateProgress = false;
+bool prozessPid = true;
 unsigned long mqtttimer = 0;
 unsigned long getDataTimer = 0;
 unsigned long RestartTimer = 0;
@@ -466,13 +467,14 @@ bool getJsonData()
     const char *value = myve.veValue[i];
 
     // if the Name PID, search in the list for the device code
-    if (strcmp(myve.veName[i], "PID") == 0)
+    if (strcmp(myve.veName[i], "PID") == 0 && prozessPid)
     {
       for (size_t k = 0; k < sizeof VeDirectDeviceList / sizeof VeDirectDeviceList[0]; k++)
       {
         if (strcmp(VeDirectDeviceList[k][0], value) == 0)
         {
           value = VeDirectDeviceList[k][1];
+          prozessPid = false;
           break;
         }
       }
