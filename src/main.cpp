@@ -18,6 +18,9 @@
 #include <SoftwareSerial.h>
 
 #include "VeDirectFrameHandler.h"
+#include "VeDirectDataList.h"
+#include "VeDirectDeviceList.h"
+#include "VeDirectDeviceCodes.h"
 #include "Settings.h" //settings functions
 
 #include "html.h"          //the HTML content
@@ -49,9 +52,9 @@ VeDirectFrameHandler myve;
 SoftwareSerial veSerial;
 
 // UnixTime uTime(3);
-DynamicJsonDocument liveJson(JSON_BUFFER);
-JsonObject liveData = liveJson.createNestedObject("LiveData");
-JsonObject statsData = liveJson.createNestedObject("StatsData");
+DynamicJsonDocument Json(JSON_BUFFER);
+//JsonObject liveData = liveJson.createNestedObject("LiveData");
+//JsonObject statsData = liveJson.createNestedObject("StatsData");
 #include "status-LED.h"
 ADC_MODE(ADC_VCC);
 //----------------------------------------------------------------------
@@ -100,7 +103,7 @@ void notifyClients()
   if (wsClient != nullptr && wsClient->canSend())
   {
     char data[JSON_BUFFER];
-    size_t len = serializeJson(liveJson, data);
+    size_t len = serializeJson(Json, data);
     wsClient->text(data, len);
   }
 }
@@ -135,7 +138,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     wsClient = client;
-    getJsonData();
+    //getJsonData();
     notifyClients();
     DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     break;
@@ -203,11 +206,14 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
-  while (veSerial.available())
-  {
+ // while (veSerial.available())
+  //{
+  //  myve.rxData(veSerial.read());
+    //esp_yield();
+  //}
+  if(veSerial.available())
     myve.rxData(veSerial.read());
-    esp_yield();
-  }
+
 }
 
 void setup()
@@ -280,7 +286,7 @@ void setup()
     MDNS.begin(_settings.data.deviceName);
     WiFi.hostname(_settings.data.deviceName);
 
-    liveJson["DEVICE_NAME"] = _settings.data.deviceName;
+    Json["Device_name"] = _settings.data.deviceName;
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
               {
@@ -290,7 +296,7 @@ void setup()
     server.on("/livejson", HTTP_GET, [](AsyncWebServerRequest *request)
               {
                 AsyncResponseStream *response = request->beginResponseStream("application/json");
-                serializeJson(liveJson, *response);
+                serializeJson(Json, *response);
                 request->send(response); });
 
     server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -422,7 +428,6 @@ void loop()
   }
   if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)) && !updateProgress)
   {
-    getJsonData();
     sendtoMQTT(); // Update data to MQTT server if we should
     mqtttimer = millis();
   }
@@ -438,25 +443,50 @@ void loop()
 
 void prozessData()
 {
+  Serial.println("Ve callback triggerd... prozessing data");
   getJsonData();
-  Serial.println("callback fired");
-}
-
-bool getEpData()
-{
-  DEBUG_WEBLN("Transmission OK.");
-  return true;
+  
 }
 
 bool getJsonData()
 {
   for (int i = 0; i < myve.veEnd; i++)
   {
-    liveJson[myve.veName[i]] = myve.veValue[i];
-    Serial.print(myve.veName[i]);
-    Serial.print("= ");
-    Serial.println(myve.veValue[i]);
+    // in case we found nothing later, fill the data holer
+    const char *descriptor = myve.veName[i];
+    const char *value = myve.veValue[i];
+
+    // if the Name PID, search in the list for the device code
+    if (strcmp(myve.veName[i], "PID") == 0)
+    {
+      for (size_t k = 0; k < sizeof VeDirectDeviceList / sizeof VeDirectDeviceList[0]; k++)
+      {
+        if (strcmp(VeDirectDeviceList[k][0], value) == 0)
+        {
+          value = VeDirectDeviceList[k][1];
+          break;
+        }
+      }
+    }
+
+    // search for every value in the list and replace it with clear name
+    for (size_t j = 0; j < sizeof VePrettyData / sizeof VePrettyData[0]; j++)
+    {
+      if (strcmp(VePrettyData[j][0], myve.veName[i]) == 0) // search the real descriptor in the array
+      {
+        descriptor = VePrettyData[j][1];
+        // check if we have a data operator
+        if (strlen(VePrettyData[j][2]) > 0) 
+        {
+          dtostrf((atof(myve.veValue[i]) / atof(VePrettyData[j][2])), 0, 2, (char*)value);
+        }
+        break; // if we have found and prozessed the data, break the loop
+      }
+    }
+    //put it all back to the json data
+    Json[descriptor] = value;
   }
+
   return true;
 }
 
@@ -473,12 +503,6 @@ bool connectMQTT()
         DEBUG_WEBLN("MQTT Data Trigger Subscribed");
         mqttclient.subscribe(_settings.data.mqttTriggerPath);
       }
-
-      if (!_settings.data.mqttJson) // classic mqtt DP
-        mqttclient.subscribe((topic + "/DeviceControl/LOAD_STATE").c_str());
-      else // subscribe json
-        mqttclient.subscribe((topic + "/DATA").c_str());
-
       return true;
     }
     else
@@ -507,70 +531,16 @@ bool sendtoMQTT()
   mqttclient.publish((mqttDeviceName + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
   if (!_settings.data.mqttJson)
   {
-    /*
-    // Device Data
-    mqttclient.publish((mqttDeviceName + "/DeviceData/DEVICE_TIME").c_str(), String(uTime.getUnix()).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/DEVICE_TEMPERATURE").c_str(), String(deviceTemperature / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/LOAD_STATE").c_str(), String(loadState ? "true" : "false").c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/BATT_VOLT_STATUS").c_str(), String(batt_volt_status[status_batt.volt]).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/BATT_TEMP").c_str(), String(batt_temp_status[status_batt.temp]).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/CHARGER_INPUT_STATUS").c_str(), String(charger_input_status[charger_input]).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/CHARGER_MODE").c_str(), String(charger_charging_status[charger_mode]).c_str());
-    // Device Settings Data
-    mqttclient.publish((mqttDeviceName + "/DeviceData/BATTERY_TYPE").c_str(), String(settingParam.s.bTyp).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/BATTERY_CAPACITY").c_str(), String(settingParam.s.bCapacity / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/TEMPERATURE_COMPENSATION").c_str(), String(settingParam.s.tempCompensation / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/HIGH_VOLT_DISCONNECT").c_str(), String(settingParam.s.highVDisconnect / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/CHARGING_LIMIT_VOLTS").c_str(), String(settingParam.s.chLimitVolt / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/OVER_VOLTS_RECONNECT").c_str(), String(settingParam.s.overVoltRecon / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/EQUALIZATION_VOLTS").c_str(), String(settingParam.s.equVolt / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/BOOST_VOLTS").c_str(), String(settingParam.s.boostVolt / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/FLOAT_VOLTS").c_str(), String(settingParam.s.floatVolt / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/BOOST_RECONNECT_VOLTS").c_str(), String(settingParam.s.boostVoltRecon / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/LOW_VOLTS_RECONNECT").c_str(), String(settingParam.s.lowVoltRecon / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/UNDER_VOLTS_RECOVER").c_str(), String(settingParam.s.underVoltRecov / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/UNDER_VOLTS_WARNING").c_str(), String(settingParam.s.underVoltWarning / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/LOW_VOLTS_DISCONNECT").c_str(), String(settingParam.s.lowVoltDiscon / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/DeviceData/DISCHARGING_LIMIT_VOLTS").c_str(), String(settingParam.s.dischLimitVolt / 100.f).c_str());
-    // Live Solar
-    mqttclient.publish((mqttDeviceName + "/LiveData/SOLAR_VOLTS").c_str(), String(live.l.pvV / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/LiveData/SOLAR_AMPS").c_str(), String(live.l.pvA / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/LiveData/SOLAR_WATTS").c_str(), String(live.l.pvW / 100.f).c_str());
-    // Live Batt
-    mqttclient.publish((mqttDeviceName + "/LiveData/BATT_VOLTS").c_str(), String(live.l.battV / 100.f).c_str());
 
-    mqttclient.publish((mqttDeviceName + "/LiveData/BATT_AMPS").c_str(), String(batteryCurrent / 100.f).c_str());
-
-    mqttclient.publish((mqttDeviceName + "/LiveData/BATT_WATTS").c_str(), String((int(live.l.battV / 10) * int(batteryCurrent / 10) / 100.f)).c_str());
-
-    // Live Load
-    mqttclient.publish((mqttDeviceName + "/LiveData/LOAD_VOLTS").c_str(), String(live.l.loadV / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/LiveData/LOAD_AMPS").c_str(), String(live.l.loadA / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/LiveData/LOAD_WATTS").c_str(), String(live.l.loadW / 100.f).c_str());
-    // Live Battery
-    mqttclient.publish((mqttDeviceName + "/LiveData/BATTERY_SOC").c_str(), String(batterySOC / 1.0f).c_str());
-    mqttclient.publish((mqttDeviceName + "/LiveData/BATTERY_TEMPERATURE").c_str(), String(batteryTemperature / 100.f).c_str());
-    // stats Solar min / max
-    mqttclient.publish((mqttDeviceName + "/StatsData/SOLAR_MAX").c_str(), String(stats.s.pVmax / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/SOLAR_MIN").c_str(), String(stats.s.pVmin / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/BATT_MAX").c_str(), String(stats.s.bVmax / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/BATT_MIN").c_str(), String(stats.s.bVmin / 100.f).c_str());
-    // stats sonsumed, generated, Co2
-    mqttclient.publish((mqttDeviceName + "/StatsData/CONS_ENERGY_DAY").c_str(), String(stats.s.consEnerDay / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/CONS_ENGERY_MON").c_str(), String(stats.s.consEnerMon / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/CONS_ENGERY_YEAR").c_str(), String(stats.s.consEnerYear / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/CONS_ENGERY_TOT").c_str(), String(stats.s.consEnerTotal / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/GEN_ENERGY_DAY").c_str(), String(stats.s.genEnerDay / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/GEN_ENERGY_MON").c_str(), String(stats.s.genEnerMon / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/GEN_ENERGY_YEAR").c_str(), String(stats.s.genEnerYear / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/GEN_ENERGY_TOT").c_str(), String(stats.s.genEnerTotal / 100.f).c_str());
-    mqttclient.publish((mqttDeviceName + "/StatsData/CO2_REDUCTION").c_str(), String(stats.s.c02Reduction / 100.f).c_str());
-    */
+    for (JsonPair i : Json.as<JsonObject>())
+    {
+    mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<const char*>());
+    }
   }
   else
   {
     char data[JSON_BUFFER];
-    serializeJson(liveJson, data);
+    serializeJson(Json, data);
     mqttclient.setBufferSize(JSON_BUFFER + 100);
     mqttclient.publish((String(mqttDeviceName + "/DATA")).c_str(), data);
   }

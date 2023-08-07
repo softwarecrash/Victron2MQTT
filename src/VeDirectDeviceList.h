@@ -1,9 +1,12 @@
 //The product id: PID
 
-const char* VeDirectDeviceList[2][150]
+const char* VeDirectDeviceList[][2]
 {
-{"BMV-700","0x203"},
-{"BMV-702","0x204"}
+{"0X203", "BMV-700"},
+{"0X204", "BMV-702"},
+
+//data for the Ve Simulator
+{"0X9999", "Ve Sim"}
 };
 /*
 BMV-700 0x203

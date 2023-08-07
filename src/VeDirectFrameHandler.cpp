@@ -189,7 +189,7 @@ void VeDirectFrameHandler::frameEndEvent(bool valid) {
 		}
 	}
 	frameIndex = 0;	// reset frame
-	requestCallback();
+	requestCallback(); //call the callback to do other things with the new data
 }
 
 /*
