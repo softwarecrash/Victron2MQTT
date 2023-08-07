@@ -251,7 +251,7 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
         //document.getElementById("inputstate").innerHTML = data.CHARGER_INPUT_STATUS;
         //document.getElementById("chrgmode").innerHTML = data.CHARGER_MODE;
 
-        if (data.ESP_VCC < 2.6) {
+        if (data.ESP_Data.ESP_VCC < 2.6) {
             document.getElementById("vcc_alert").style.display = '';
         } else {
             document.getElementById("vcc_alert").style.display = 'none';

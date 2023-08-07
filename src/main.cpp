@@ -53,8 +53,8 @@ SoftwareSerial veSerial;
 
 // UnixTime uTime(3);
 DynamicJsonDocument Json(JSON_BUFFER);
-//JsonObject liveData = liveJson.createNestedObject("LiveData");
-//JsonObject statsData = liveJson.createNestedObject("StatsData");
+JsonObject jsonESP = Json.createNestedObject("ESP_Data");
+// JsonObject statsData = liveJson.createNestedObject("StatsData");
 #include "status-LED.h"
 ADC_MODE(ADC_VCC);
 //----------------------------------------------------------------------
@@ -138,7 +138,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     wsClient = client;
-    //getJsonData();
+    // getJsonData();
     notifyClients();
     DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     break;
@@ -206,14 +206,13 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
- // while (veSerial.available())
+  // while (veSerial.available())
   //{
   //  myve.rxData(veSerial.read());
-    //esp_yield();
+  // esp_yield();
   //}
-  if(veSerial.available())
+  if (veSerial.available())
     myve.rxData(veSerial.read());
-
 }
 
 void setup()
@@ -445,13 +444,20 @@ void prozessData()
 {
   Serial.println("Ve callback triggerd... prozessing data");
   getJsonData();
-  
 }
 
 bool getJsonData()
 {
-  Json["ESP_VCC"] = ESP.getVcc() / 1000.0;
-
+  jsonESP[F("ESP_VCC")] = ESP.getVcc() / 1000.0;
+  jsonESP[F("Wifi_RSSI")] = WiFi.RSSI();
+  jsonESP[F("sw_version")] = SOFTWARE_VERSION;
+  jsonESP[F("Flash_Size")] = ESP.getFlashChipSize();
+  jsonESP[F("Sketch_Size")] = ESP.getSketchSize();
+  jsonESP[F("Free_Sketch_Space")] = ESP.getFreeSketchSpace();
+  jsonESP[F("Real_Flash_Size")] = ESP.getFlashChipRealSize();
+  jsonESP[F("Free_Heap")] = ESP.getFreeHeap();
+  jsonESP[F("HEAP_Fragmentation")] = ESP.getHeapFragmentation();
+  jsonESP[F("Free_BlockSize")] = ESP.getMaxFreeBlockSize();
 
   for (int i = 0; i < myve.veEnd; i++)
   {
@@ -479,14 +485,14 @@ bool getJsonData()
       {
         descriptor = VePrettyData[j][1];
         // check if we have a data operator
-        if (strlen(VePrettyData[j][2]) > 0) 
+        if (strlen(VePrettyData[j][2]) > 0)
         {
-          dtostrf((atof(myve.veValue[i]) / atof(VePrettyData[j][2])), 0, 2, (char*)value);
+          dtostrf((atof(myve.veValue[i]) / atof(VePrettyData[j][2])), 0, 2, (char *)value);
         }
         break; // if we have found and prozessed the data, break the loop
       }
     }
-    //put it all back to the json data
+    // put it all back to the json data
     Json[descriptor] = value;
   }
 
@@ -537,7 +543,10 @@ bool sendtoMQTT()
 
     for (JsonPair i : Json.as<JsonObject>())
     {
-    mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<const char*>());
+      if (strcmp(i.key().c_str(), "ESP_Data") == 0)
+        mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<String>().c_str());
+      else
+        mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<const char *>());
     }
   }
   else
