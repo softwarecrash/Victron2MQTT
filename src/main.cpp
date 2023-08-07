@@ -450,6 +450,9 @@ void prozessData()
 
 bool getJsonData()
 {
+  Json["ESP_VCC"] = ESP.getVcc() / 1000.0;
+
+
   for (int i = 0; i < myve.veEnd; i++)
   {
     // in case we found nothing later, fill the data holer
