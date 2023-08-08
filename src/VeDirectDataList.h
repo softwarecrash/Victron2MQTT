@@ -48,16 +48,19 @@ static const char * const VePrettyData[][3]{
 {"ERR", "Current_error", ""},
 {"CS", "Operation_state", ""},
 {"BMV", "Model description", ""},
-  {"FW", "Firmware_version_16", ""},
-  {"FWE", "Firmware_version_24", ""},
-  {"PID", "Product_ID", ""},
-  {"BMV", "Model description", ""},
-  
-  
-  
-  
-  
-  
-
+{"FW", "Firmware_version_16", ""},
+{"FWE", "Firmware_version_24", ""},
 {"PID","Device_model",""},
+{"SER#","Serial_number",""},
+{"HSDS","Day",""},
+{"MODE","Device_mode",""},
+{"AC_OUT_V","AC_out_volt","1000"},
+{"AC_OUT_I","AC_out_current","100"},
+{"AC_OUT_S","AC_out_apparent_pow",""},
+{"WARN","Warning_reason",""},
+{"MPPT","Tracker_operation_mode",""},
+{"MON","DC_monitor_mode",""},
+{"DC_IN_V","DC_input_voltage","1000"},
+{"DC_IN_I","DC_input_current","100"},
+{"DC_IN_P","DC_input_power",""},
 };
