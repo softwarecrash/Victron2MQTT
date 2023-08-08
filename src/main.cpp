@@ -539,6 +539,7 @@ bool sendtoMQTT()
 
   //-----------------------------------------------------
   mqttclient.publish((mqttDeviceName + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
+  mqttclient.publish((mqttDeviceName + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
   if (!_settings.data.mqttJson)
   {
 
