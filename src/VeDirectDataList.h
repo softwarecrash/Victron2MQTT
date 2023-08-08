@@ -32,6 +32,11 @@ const char* VePrettyData[][3]{
 {"H8", "Maximum_voltage", "100"},
 {"H9", "Last_full_charge", ""},
 {"H10", "Num_automatic_sync", ""},
+{"H11", "Num_low_volt_alarms", ""},
+{"H12", "Num_high_volt_alarms", ""},
+{"H12", "Num_low_aux_vol_alarms", ""},
+{"H13", "Num_high_aux_vol_alarms", ""},
+  
   
   
 
