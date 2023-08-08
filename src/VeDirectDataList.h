@@ -1,5 +1,4 @@
-//static const char * const
-const char* VePrettyData[][3]{
+static const char * const VePrettyData[][3]{
 // get name, pretify name, value operator
 {"V","Voltage", "100",}, // display in webUI | Dont edit
 {"V2","Voltage_2", "100",},
