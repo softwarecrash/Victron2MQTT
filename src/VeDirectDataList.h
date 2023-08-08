@@ -3,8 +3,12 @@ const char* VePrettyData[][3]{
 {"V","Voltage", "100",}, // most device deliver this, display in webUI
 {"V2","Voltage_2", "100",},
 {"V3","Voltage_3", "100",},
-{"VS","Starter_voltage", "100",}
-
+{"VS","Starter_voltage", "100",},
+{"VM","Mid_voltage", "100",},
+{"DM","Mid_deviation", "",},
+{"VPV","Panel_voltage", "100",},
+{"PPV","Panel_power", "",},
+  
 {"I","Battery_current","100"}, // most device deliver this, display in webUI
 {"I2","Battery_current_2","100"},
 {"I3","Battery_current_3","100"},
