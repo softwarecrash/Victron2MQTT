@@ -445,6 +445,7 @@ void prozessData()
 {
   Serial.println("Ve callback triggerd... prozessing data");
   getJsonData();
+  notifyClients();
 }
 
 bool getJsonData()

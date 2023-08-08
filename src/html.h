@@ -95,51 +95,32 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
 
 <div class="row gx-0 mb-2">
     <div class="col">
-        <div class="bg-light">Device Time: </div>
+        <div class="bg-light">Voltage: </div>
     </div>
     <div class="col">
-        <div class="bg-light"><span id="devtime"></span></br></div>
+        <div class="bg-light"><span id="volt"></span></div>
     </div>
 </div>
 
 <div class="row gx-0 mb-2">
     <div class="col">
-        <div class="bg-light">Solar: </div>
+        <div class="bg-light">Current: </div>
     </div>
     <div class="col">
-        <div class="bg-light"><span id="solarV"></span><span id="solarA"></span><span id="solarW"></span></div>
+        <div class="bg-light"><span id="current"></span></div>
     </div>
 </div>
 
 <div class="row gx-0 mb-2">
     <div class="col">
-        <div class="bg-light">Battery: </div>
+        <div class="bg-light">Relay: </div>
     </div>
     <div class="col">
-        <div class="bg-light"><span id="battV"></span><span id="battA"></span><span id="battW"></span><span
-                id="battSOC"></span></div>
+        <div class="bg-light"><span id="relay"></span></div>
     </div>
 </div>
 
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">Load: </div>
-    </div>
-    <div class="col">
-        <div class="bg-light"><span id="loadV"></span><span id="loadA"></span><span id="loadW"></span></div>
-    </div>
-</div>
-
-<div class="row gx-0 mb-2">
-    <div class="col">
-        <div class="bg-light">temperature: </div>
-    </div>
-    <div class="col">
-        <div class="bg-light"><span id="deviceTemp"></span><span id="battTemp"></span></div>
-    </div>
-</div>
-
-<div class="row gx-0 mb-2">
+<div class="row gx-0 mb-2" style="display: none;">
     <div class="col">
         <div class="bg-light">Consumed Kwh: </div>
     </div>
@@ -149,7 +130,7 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
     </div>
 </div>
 
-<div class="row gx-0 mb-2">
+<div class="row gx-0 mb-2" style="display: none;">
     <div class="col">
         <div class="bg-light">generated Kwh: </div>
     </div>
@@ -159,7 +140,7 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
     </div>
 </div>
 
-<div class="row gx-0 mb-2">
+<div class="row gx-0 mb-2" style="display: none;">
     <div class="col">
         <div class="bg-light">CO2 Reduction: </div>
     </div>
@@ -168,7 +149,7 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
     </div>
 </div>
 
-<div class="row gx-0 mb-2">
+<div class="row gx-0 mb-2" style="display: none;">
     <div class="col">
         <div class="bg-light">Input State: </div>
     </div>
@@ -177,7 +158,7 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
     </div>
 </div>
 
-<div class="row gx-0 mb-2">
+<div class="row gx-0 mb-2" style="display: none;">
     <div class="col">
         <div class="bg-light">Charge Mode: </div>
     </div>
@@ -186,7 +167,7 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
     </div>
 </div>
 
-<div class="row gx-0 mb-2">
+<div class="row gx-0 mb-2" style="display: none;">
     <div class="col">
         <div class="bg-light">Load State: </div>
     </div>
@@ -202,8 +183,6 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
 <script>
     var gateway = `ws://${window.location.hostname}/ws`;
     var websocket;
-    var selInverter = 1;
-    var invQuantity = 1;
     window.addEventListener('load', onLoad);
     function initWebSocket() {
         console.log('Trying to open a WebSocket connection...');
@@ -229,27 +208,12 @@ const char HTML_MAIN[] PROGMEM = R"rawliteral(%pre_head_template%
         var data = JSON.parse(event.data);
 
         document.getElementById("devicename").innerHTML = data.Device_name == null ? 'No Connection' : data.Device_name;
-        //document.getElementById("devtime").innerHTML = unixTimetoDateTime(data.DEVICE_TIME);
-
-        //document.getElementById("solarV").innerHTML = data.LiveData.SOLAR_VOLTS + 'V ';
-        //document.getElementById("solarA").innerHTML = data.LiveData.SOLAR_AMPS + 'A  ';
-        //document.getElementById("solarW").innerHTML = data.LiveData.SOLAR_WATTS + 'W  ';
-        //document.getElementById("battSOC").innerHTML = data.LiveData.BATTERY_SOC + '%%';
+        document.getElementById("volt").innerHTML = data.Voltage + 'V';
+        document.getElementById("current").innerHTML = data.Battery_current + 'A';
+        document.getElementById("relay").innerHTML = data.Relay;
 
         document.getElementById("SOCbar").innerHTML = data.SOC + '%%';
         $('#SOCbar').width(Number(data.SOC) + "%").attr('aria-valuenow', Number(data.SOC));
-
-        //document.getElementById("battV").innerHTML = data.LiveData.BATT_VOLTS + 'V ';
-        //document.getElementById("battA").innerHTML = data.LiveData.BATT_AMPS + 'A  ';
-        //document.getElementById("battW").innerHTML = data.LiveData.BATT_WATTS + 'W  ';
-
-        //document.getElementById("loadV").innerHTML = data.LiveData.LOAD_VOLTS + 'V ';
-        //document.getElementById("loadA").innerHTML = data.LiveData.LOAD_AMPS + 'A  ';
-        //document.getElementById("loadW").innerHTML = data.LiveData.LOAD_WATTS + 'W  ';
-
-
-        //document.getElementById("inputstate").innerHTML = data.CHARGER_INPUT_STATUS;
-        //document.getElementById("chrgmode").innerHTML = data.CHARGER_MODE;
 
         if (data.ESP_Data.ESP_VCC < 2.6) {
             document.getElementById("vcc_alert").style.display = '';
@@ -328,33 +292,11 @@ const char HTML_SETTINGS[] PROGMEM = R"rawliteral(%pre_head_template%
     </div>
   </form>
   <a class="btn btn-primary" href="/settingsedit" role="button">Configure</a>
-  <a class="btn btn-primary" onclick='SendDateString();' role="button">Set device time from computer</a>
   <a class="btn btn-warning" href="/reboot" role="button">Reboot</a>
   <a class="btn btn-primary" href="/confirmreset" role="button">Reset ESP</a>
   <a class="btn btn-primary" href="/webserial" role="button" target="_blank">WebSerial</a>
   <a class="btn btn-primary" href="/" role="button">Back</a>
 </div>
-
-<script>
-  function SendDateString() {
-    var today = new Date();
-    var dateString;
-    dateString = (today.getFullYear().toString().slice(2, 4)) +
-      ((today.getMonth() + 1) < 10 ? '0' : '') + (today.getMonth() + 1) +
-      (today.getDate() < 10 ? '0' : '') + today.getDate() +
-      (today.getHours() < 10 ? '0' : '') + today.getHours() +
-      (today.getMinutes() < 10 ? '0' : '') + today.getMinutes() +
-      (today.getSeconds() < 10 ? '0' : '') + today.getSeconds();
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = () => {
-      if (xhr.readyState === 4) {
-        window.location.href = '/';
-      }
-    }
-    xhr.open("GET", "/set?datetime=" + dateString, true);
-    xhr.send();
-  }
-</script>
 %pre_foot_template%
 <p hidden>Hidden Helper</p>)rawliteral";
 const char HTML_SETTINGS_EDIT[] PROGMEM = R"rawliteral(%pre_head_template%
