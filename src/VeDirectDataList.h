@@ -28,6 +28,11 @@ const char* VePrettyData[][3]{
 {"H4", "Charge_cycles", ""},
 {"H5", "Full_discharges", ""},
 {"H6", "Cumulative_Ah_drawn", "100"},
+{"H7", "Minimum_voltage", "100"},
+{"H8", "Maximum_voltage", "100"},
+{"H9", "Last_full_charge", ""},
+{"H10", "Num_automatic_sync", ""},
+  
   
 
 {"PID","Device_model",""},
