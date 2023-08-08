@@ -36,6 +36,25 @@ static const char * const VePrettyData[][3]{
 {"H12", "Num_high_volt_alarms", ""},
 {"H13", "Num_low_aux_vol_alarms", ""},
 {"H14", "Num_high_aux_vol_alarms", ""},
+{"H15", "Min_aux_volt", "100"},
+{"H16", "Max_aux_volt", "100"},
+{"H17", "Amount_discharged_energy", "1000"},
+{"H18", "Amount_charged_energy", "1000"},
+{"H19", "total_kWh", "1000"},
+{"H20", "today_kWh", "1000"},
+{"H21", "Max_pow_today", ""},
+{"H22", "Yesterday_kWh", "1000"},
+{"H23", "Max_pow_yesterday", ""},
+{"ERR", "Current_error", ""},
+{"CS", "Operation_state", ""},
+{"BMV", "Model description", ""},
+  {"FW", "Firmware_version_16", ""},
+  {"FWE", "Firmware_version_24", ""},
+  {"PID", "Product_ID", ""},
+  {"BMV", "Model description", ""},
+  
+  
+  
   
   
   
