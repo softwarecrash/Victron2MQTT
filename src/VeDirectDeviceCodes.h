@@ -1,5 +1,5 @@
 // AR
-const char *VeDirectDeviceCodeAR[][25]{
+static const char * const VeDirectDeviceCodeAR[][25]{
     {"1", "Low Voltage"},
     {"2", "High Voltage"},
     {"4", "Low SOC"},
