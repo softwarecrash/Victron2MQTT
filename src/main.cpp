@@ -33,7 +33,6 @@ bool shouldSaveConfig = false;
 bool restartNow = false;
 bool updateProgress = false;
 unsigned long mqtttimer = 0;
-unsigned long getDataTimer = 0;
 unsigned long RestartTimer = 0;
 byte wsReqInvNum = 1;
 char mqtt_server[80];
@@ -224,7 +223,7 @@ void setup()
   WiFi.persistent(true);              // fix wifi save bug
   AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
-  veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX, MYPORT_TX, false);
+  veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX,/* MYPORT_TX,*/ false);
   veSerial.flush();
   myve.callback(prozessData);
 
@@ -407,28 +406,11 @@ void loop()
 
   // Make sure wifi is in the right mode
   if (WiFi.status() == WL_CONNECTED)
-  { // No use going to next step unless WIFI is up and running.
-    ReadVEData();
-
+  {                      // No use going to next step unless WIFI is up and running.
     ws.cleanupClients(); // clean unused client connections
-    // MDNS.update();
+    MDNS.update();
+    ReadVEData();
     mqttclient.loop(); // Check if we have something to read from MQTT
-
-    if (millis() > (getDataTimer + 500) && !updateProgress && wsClient != nullptr && wsClient->canSend())
-    {
-      notifyClients();
-    }
-    getDataTimer = millis();
-  }
-
-  if (updateProgress)
-  {
-    getDataTimer = millis();
-  }
-  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)) && !updateProgress)
-  {
-    sendtoMQTT(); // Update data to MQTT server if we should
-    mqtttimer = millis();
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))
@@ -445,6 +427,13 @@ void prozessData()
   Serial.println("Ve callback triggerd... prozessing data");
   getJsonData();
   notifyClients();
+
+  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)) && !updateProgress)
+  {
+    Serial.println("<MQTT> Data Send...");
+    sendtoMQTT(); // Update data to MQTT server if we should
+    mqtttimer = millis();
+  }
 }
 
 bool getJsonData()

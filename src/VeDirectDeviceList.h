@@ -30,30 +30,31 @@ static const char * const VeDirectDeviceList[][2]
 {"0XA056","SmartSolar MPPT 100|30"},
 {"0XA057","SmartSolar MPPT 100|50"},
 {"0XA058","SmartSolar MPPT 150|35"},
+{"0XA059","SmartSolar MPPT 150|100 rev2"},
+{"0XA05A","SmartSolar MPPT 150|85 rev2"},
+{"0XA05B","SmartSolar MPPT 250|70"},
+{"0XA05C","SmartSolar MPPT 250|85"},
+{"0XA05D","SmartSolar MPPT 250|60"},
+{"0XA05E","SmartSolar MPPT 250|45"},
+{"0XA05F","SmartSolar MPPT 100|20"},
+{"0XA060","SmartSolar MPPT 100|20 48V"},
+{"0XA061","SmartSolar MPPT 150|45"},
+{"0XA062","SmartSolar MPPT 150|60"},
+{"0XA063","SmartSolar MPPT 150|70"},
+{"0XA064","SmartSolar MPPT 250|85 rev2"},
+{"0XA065","SmartSolar MPPT 250|100 rev2"},
+{"0XA066","BlueSolar MPPT 100|20"},
+{"0XA067","BlueSolar MPPT 100|20 48V"},
+{"0XA068","SmartSolar MPPT 250|60 rev2"},
+{"0XA069","SmartSolar MPPT 250|70 rev2"},
+{"0XA06A","SmartSolar MPPT 150|45 rev2"},
+{"0XA06B","SmartSolar MPPT 150|60 rev2"},
 
 //data for the Ve Simulator
 {"0X9999", "Ve Sim"}
 };
 /*
-SmartSolar MPPT 150|100 rev2 0XA059
-SmartSolar MPPT 150|85 rev2 0XA05A
-SmartSolar MPPT 250|70 0XA05B
-SmartSolar MPPT 250|85 0XA05C
-SmartSolar MPPT 250|60 0XA05D
-SmartSolar MPPT 250|45 0XA05E
-SmartSolar MPPT 100|20 0XA05F
-SmartSolar MPPT 100|20 48V 0XA060
-SmartSolar MPPT 150|45 0XA061
-SmartSolar MPPT 150|60 0XA062
-SmartSolar MPPT 150|70 0XA063
-SmartSolar MPPT 250|85 rev2 0XA064
-SmartSolar MPPT 250|100 rev2 0XA065
-BlueSolar MPPT 100|20 0XA066
-BlueSolar MPPT 100|20 48V 0XA067
-SmartSolar MPPT 250|60 rev2 0XA068
-SmartSolar MPPT 250|70 rev2 0XA069
-SmartSolar MPPT 150|45 rev2 0XA06A
-SmartSolar MPPT 150|60 rev2 0XA06B
+ 
 SmartSolar MPPT 150|70 rev2 0XA06C
 SmartSolar MPPT 150|85 rev3 0XA06D
 SmartSolar MPPT 150|100 rev3 0XA06E
