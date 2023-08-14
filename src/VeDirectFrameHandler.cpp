@@ -61,7 +61,7 @@ VeDirectFrameHandler::VeDirectFrameHandler() :
  */
 void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
-	Serial.print((char)inbyte);
+	Serial.write(inbyte);
 	//if (mStop) return;
 	if ( (inbyte == ':') && (mState != CHECKSUM) ) {
 		mState = RECORD_HEX;

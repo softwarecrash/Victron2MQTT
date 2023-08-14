@@ -205,11 +205,11 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
-  // while (veSerial.available())
+ //  while (veSerial.available())
   //{
   //  myve.rxData(veSerial.read());
   // esp_yield();
-  //}
+ // }
   if (veSerial.available())
     myve.rxData(veSerial.read());
 }
@@ -223,7 +223,7 @@ void setup()
   WiFi.persistent(true);              // fix wifi save bug
   AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
-  veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX,/* MYPORT_TX,*/ false);
+  veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX, MYPORT_TX, false);
   veSerial.flush();
   myve.callback(prozessData);
 
