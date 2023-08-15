@@ -6,13 +6,27 @@
 #define MYPORT_RX 13
 #define LED_PIN 02 //D4 with the LED on Wemos D1 Mini
 
-#define DEBUG_BAUD 9600
+#define DEBUG_BAUD 19200
 
 #define JSON_BUFFER 2048
 #define MQTT_BUFFER 512
 
-//#define EPEVER_SERIAL Serial
-//#define SERIAL_DEBUG Serial1
+#define FlashSize ESP.getFlashChipSize()
+#define ESP01
+#ifdef ARDUINO_ESP8266_ESP01
+#ifdef MYPORT_TX
+#undef MYPORT_TX
+#define MYPORT_TX 0
+#endif
+#ifdef MYPORT_RX
+#undef MYPORT_RX
+#define MYPORT_RX 2
+#ifdef ESP01
+#undef ESP01
+#define ESP01 "display: none;"
+#endif 
+#endif
+#endif
 
 // DON'T edit version here, place version number in platformio.ini (custom_prog_version) !!!
 #define SOFTWARE_VERSION SWVERSION

@@ -197,10 +197,10 @@ void VeDirectFrameHandler::frameEndEvent(bool valid) {
  *  This function included for continuity and possible future use.	
  */
 void VeDirectFrameHandler::logE(char * module, char * error) {
-	Serial.print("MODULE: ");
-    Serial.println(module);
-    Serial.print("ERROR: ");
-    Serial.println(error);
+	//Serial.print("MODULE: ");
+    //Serial.println(module);
+    //Serial.print("ERROR: ");
+    //Serial.println(error);
 	return;
 }
 

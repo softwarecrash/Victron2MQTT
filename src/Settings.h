@@ -13,17 +13,18 @@ class Settings
 public:
   String deviceNameStr;
   struct Data
-  {                              // do not re-sort this struct
-    unsigned int coVers;         // config version, if changed, previus config will erased
-    char deviceName[40];         // device name
-    char mqttServer[40];         // mqtt Server adress
-    char mqttUser[40];           // mqtt Username
-    char mqttPassword[40];       // mqtt Password
-    char mqttTopic[40];          // mqtt publish topic
-    char mqttTriggerPath[80];    // MQTT Data Trigger Path
-    unsigned int mqttPort;       // mqtt port
-    unsigned int mqttRefresh;    // mqtt refresh time
-    bool mqttJson;               // switch between classic mqtt and json
+  {                           // do not re-sort this struct
+    unsigned int coVers;      // config version, if changed, previus config will erased
+    char deviceName[40];      // device name
+    char mqttServer[40];      // mqtt Server adress
+    char mqttUser[40];        // mqtt Username
+    char mqttPassword[40];    // mqtt Password
+    char mqttTopic[40];       // mqtt publish topic
+    char mqttTriggerPath[80]; // MQTT Data Trigger Path
+    unsigned int mqttPort;    // mqtt port
+    unsigned int mqttRefresh; // mqtt refresh time
+    bool mqttJson;            // switch between classic mqtt and json
+    bool webUIdarkmode;       // flag for dark mode
   } data;
 
   void load()
@@ -93,6 +94,10 @@ private:
     {
       strcpy(data.mqttTriggerPath, "");
     }
+    if (data.webUIdarkmode && !data.webUIdarkmode)
+    {
+      data.webUIdarkmode = false;
+    }
   }
   void coVersCheck()
   {
@@ -108,6 +113,7 @@ private:
       data.mqttPort = 0;
       data.mqttRefresh = 300;
       data.mqttJson = false;
+      data.webUIdarkmode = false;
 
       save();
       load();

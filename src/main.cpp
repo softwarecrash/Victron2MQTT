@@ -22,6 +22,7 @@
 #include "VeDirectDeviceList.h"
 #include "VeDirectDeviceCodes.h"
 #include "Settings.h" //settings functions
+#include <Updater.h> //new
 
 #include "html.h"          //the HTML content
 #include "htmlProzessor.h" // The html Prozessor
@@ -31,7 +32,8 @@ String topic = ""; // Default first part of topic. We will add device ID in setu
 // flag for saving data and other things
 bool shouldSaveConfig = false;
 bool restartNow = false;
-bool updateProgress = false;
+//bool updateProgress = false;
+bool workerCanRun = true;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
 byte wsReqInvNum = 1;
@@ -63,47 +65,19 @@ void saveConfigCallback()
   shouldSaveConfig = true;
 }
 
-static void handle_update_progress_cb(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-{
-  uint32_t free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-  if (!index)
-  {
-    Update.runAsync(true);
-    if (!Update.begin(free_space))
-    {
-      Update.printError(Serial);
-    }
-  }
-
-  if (Update.write(data, len) != len)
-  {
-    Update.printError(Serial);
-  }
-
-  if (final)
-  {
-    if (!Update.end(true))
-    {
-      Update.printError(Serial);
-    }
-    else
-    {
-      AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_REBOOT, htmlProcessor);
-      request->send(response);
-      DEBUG_WEBLN(F("Update complete"));
-      RestartTimer = millis();
-      restartNow = true; // Set flag so main loop can issue restart call
-    }
-  }
-}
-
 void notifyClients()
 {
   if (wsClient != nullptr && wsClient->canSend())
   {
-    char data[JSON_BUFFER];
-    size_t len = serializeJson(Json, data);
-    wsClient->text(data, len);
+    DEBUG_WEB(F("<WEBS> Data sent to WebSocket... "));
+    size_t len = measureJson(Json);
+    AsyncWebSocketMessageBuffer *buffer = ws.makeBuffer(len);
+    if (buffer)
+    {
+      serializeJson(Json, (char *)buffer->get(), len + 1);
+      wsClient->text(buffer);
+    }
+    DEBUG_WEBLN(F("Done"));
   }
 }
 
@@ -206,12 +180,14 @@ bool resetCounter(bool count)
 void ReadVEData()
 {
  //  while (veSerial.available())
-  //{
-  //  myve.rxData(veSerial.read());
-  // esp_yield();
+//  {
+ //   myve.rxData(veSerial.read());
+ //  esp_yield();
  // }
-  if (veSerial.available())
-    myve.rxData(veSerial.read());
+  if (veSerial.available()){
+      myve.rxData(veSerial.read());
+  }
+  
 }
 
 void setup()
@@ -318,7 +294,7 @@ void setup()
                 delay(500);
                 _settings.reset();
                 ESP.eraseConfig();
-                ESP.restart(); });
+                ESP.reset(); });
 
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
               {
@@ -341,43 +317,48 @@ void setup()
                 strncpy(_settings.data.deviceName, request->arg("post_deviceName").c_str(), 40);
                 _settings.data.mqttJson = (request->arg("post_mqttjson") == "true") ? true : false;
                 strncpy(_settings.data.mqttTriggerPath, request->arg("post_mqtttrigger").c_str(), 80);
+                _settings.data.webUIdarkmode = (request->arg("post_webuicolormode") == "true") ? true : false;
                 _settings.save();
                 request->redirect("/reboot"); });
-    /*
-        server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
-                  {
-          AsyncWebParameter *p = request->getParam(0);
 
-          if (p->name() == "datetime")
-          {
-            uint8_t rtcSetY  = atoi (request->getParam("datetime")->value().substring(0, 2).c_str ());
-            uint8_t rtcSetM  = atoi (request->getParam("datetime")->value().substring(2, 4).c_str ());
-            uint8_t rtcSetD  = atoi (request->getParam("datetime")->value().substring(4, 6).c_str ());
-            uint8_t rtcSeth  = atoi (request->getParam("datetime")->value().substring(6, 8).c_str ());
-            uint8_t rtcSetm  = atoi (request->getParam("datetime")->value().substring(8, 10).c_str ());
-            uint8_t rtcSets  = atoi (request->getParam("datetime")->value().substring(10, 12).c_str ());
+server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request){
+    //https://gist.github.com/JMishou/60cb762047b735685e8a09cd2eb42a60
+    // the request handler is triggered after the upload has finished... 
+    // create the response, add header, and send response
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", (Update.hasError())?"FAIL":"OK");
+    response->addHeader("Connection", "close");
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    //restartNow = true; // Tell the main loop to restart the ESP
+    request->send(response);
+  },[](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+    //Upload handler chunks in data
+    
+    if(!index){ // if index == 0 then this is the first frame of data
+      Serial.printf("UploadStart: %s\n", filename.c_str());
+      Serial.setDebugOutput(true);
+      
+      // calculate sketch space required for the update
+      uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+      if(!Update.begin(maxSketchSpace)){//start with max available size
+        Update.printError(Serial);
+      }
+      Update.runAsync(true); // tell the updaterClass to run in async mode
+    }
 
-          for (size_t i = 1; i <= ((size_t)_settings.data.deviceQuantity); i++)
-          {
-            epnode.setSlaveId(i);
-            epnode.setTransmitBuffer(0, ((uint16_t)rtcSetm << 8) | rtcSets); // minute | secund
-            epnode.setTransmitBuffer(1, ((uint16_t)rtcSetD << 8) | rtcSeth); // day | hour
-            epnode.setTransmitBuffer(2, ((uint16_t)rtcSetY << 8) | rtcSetM); // year | month
-            epnode.writeMultipleRegisters(0x9013, 3); //write registers
-            delay(50);
-          }
-            }
-
-         request->send(200, "text/plain", "message received"); });
-    */
-    server.on(
-        "/update", HTTP_POST, [](AsyncWebServerRequest *request)
-        {
-      Serial.end();
-      updateProgress = true;
-      ws.enable(false);
-      ws.closeAll(); },
-        handle_update_progress_cb);
+    //Write chunked data to the free sketch space
+    if(Update.write(data, len) != len){
+        Update.printError(Serial);
+    }
+    
+    if(final){ // if the final flag is set then this is the last frame of data
+      if(Update.end(true)){ //true to set the size to the current progress
+          Serial.printf("Update Success: %u B\nRebooting...\n", index+len);
+        } else {
+          Update.printError(Serial);
+        }
+        Serial.setDebugOutput(false);
+    }
+  });
 
     server.onNotFound([](AsyncWebServerRequest *request)
                       { request->send(418, "text/plain", "418 I'm a teapot"); });
@@ -403,34 +384,41 @@ void setup()
 //----------------------------------------------------------------------
 void loop()
 {
-
+    if (Update.isRunning())
+  {
+    workerCanRun = false;
+  }
   // Make sure wifi is in the right mode
-  if (WiFi.status() == WL_CONNECTED)
+  if (WiFi.status() == WL_CONNECTED && workerCanRun)
   {                      // No use going to next step unless WIFI is up and running.
     ws.cleanupClients(); // clean unused client connections
     MDNS.update();
     ReadVEData();
     mqttclient.loop(); // Check if we have something to read from MQTT
+    veSerial.write(Serial.read()); // pass the serial to ve
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))
   {
     DEBUG_WEBLN("Restart");
-    ESP.restart();
+    ESP.reset();
   }
+    if (workerCanRun)
+  {
   notificationLED(); // notification LED routine
+  }
 }
 // End void loop
 
 void prozessData()
 {
-  Serial.println("Ve callback triggerd... prozessing data");
+  DEBUG_WEBLN("Ve callback triggerd... prozessing data");
   getJsonData();
   notifyClients();
 
-  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)) && !updateProgress)
+  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
   {
-    Serial.println("<MQTT> Data Send...");
+    DEBUG_WEBLN("<MQTT> Data Send...");
     sendtoMQTT(); // Update data to MQTT server if we should
     mqtttimer = millis();
   }
@@ -553,7 +541,7 @@ bool sendtoMQTT()
 
 void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
 {
-  updateProgress = true; // stop servicing data
+  //updateProgress = true; // stop servicing data
   if (!_settings.data.mqttJson)
   {
     String messageTemp;
@@ -573,5 +561,5 @@ void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
     DEBUG_WEBLN("MQTT Data Trigger Firered Up");
     mqtttimer = 0;
   }
-  updateProgress = false; // start data servicing again
+  //updateProgress = false; // start data servicing again
 }

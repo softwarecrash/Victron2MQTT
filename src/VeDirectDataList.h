@@ -6,17 +6,17 @@ static const char * const VePrettyData[][3]{
 {"VS","Starter_voltage", "1000",},
 {"VM","Mid_voltage", "1000",},
 {"DM","Mid_deviation", "",},
-{"VPV","Panel_voltage", "1000",},
-{"PPV","Panel_power", "",},
+{"VPV","Panel_voltage", "1000",}, // display in webUI | Dont edit
+{"PPV","Panel_power", "",}, // display in webUI | Dont edit
 {"I","Battery_current","1000"}, // display in webUI | Dont edit
 {"I2","Battery_current_2","1000"},
 {"I3","Battery_current_3","1000"},
-{"IL","Load_current","1000"},
-{"LOAD","Load_output_state",""},
-{"T","Load_output_state",""},
+{"IL","Load_current","1000"}, // display in webUI | Dont edit
+{"LOAD","Load_output_state",""}, // display in webUI | Dont edit
+{"T","Load_output_state",""}, // display in webUI | Dont edit
 {"P","Instantaneous_power",""},
 {"CE","Consumed_Amp_Hours","1000"},
-{"SOC", "SOC", "1000"},
+{"SOC", "SOC", "1000"}, // display in webUI | Dont edit
 {"TTG","Time_to_go",""},
 {"ALARM","Alarm",""},
 {"RELAY","Relay",""}, // display in webUI | Dont edit
