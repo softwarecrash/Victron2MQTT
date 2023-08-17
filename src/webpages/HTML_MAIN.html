@@ -1,0 +1,129 @@
+%pre_head_template%
+<div class="row gx-0 mb-2" id="vcc_alert" style="display: none;">
+    <div class="alert alert-danger" role="alert" style="text-align: center;">
+        <span><b>WARNING ESP VOLTAGE TO LOW</b></span>
+    </div>
+</div>
+
+<figure class="text-center">
+    <h2 id="devicename"></h2>
+</figure>
+
+<div class="dR row gx-0 mb-2">
+    <div class="col">
+        <div class="progress" style="height:1.8rem;">
+            <div id="SOCbar" class="progress-bar" role="progressbar" style="width:0%%;height:1.8rem;" aria-valuenow="0"
+                aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+    </div>
+</div>
+
+<div class="dR row gx-0 mb-2 bg-light rounded bg-opacity-50 px-2">
+    <div class="col">Battery: </div>
+    <div class="col dF">
+        <span id="battvolt"></span>
+        <span id="battcurrent"></span>
+    </div>
+</div>
+<div class="dR row gx-0 mb-2 bg-light rounded bg-opacity-50 px-2">
+    <div class="col">Panel: </div>
+    <div class="col dF">
+        <span id="pannelvolt"></span>
+        <span id="pannelcurrent"></span>
+    </div>
+</div>
+<div class="dR row gx-0 mb-2 bg-light rounded bg-opacity-50 px-2">
+    <div class="col">Load: </div>
+    <div class="col dF">
+        <span id="loadcurrent"></span>
+    </div>
+</div>
+
+<div class="dR row gx-0 mb-2 bg-light rounded bg-opacity-50 px-2">
+    <div class="col">Load out: </div>
+    <div class="col dF"><span id="loadstate"></span></div>
+</div>
+
+<div class="dR row gx-0 mb-2 bg-light rounded bg-opacity-50 px-2">
+    <div class="col">Relay: </div>
+    <div class="col dF"><span id="relaystate"></span></div>
+</div>
+
+<div class="d-grid gap-2">
+    <a class="btn btn-primary btn-block" href="/settings" role="button">Settings</a>
+</div>
+
+<script>
+    var gateway = `ws://${window.location.hostname}/ws`;
+    var websocket;
+    var dataRows = document.getElementsByClassName("dR");
+    var dataFields = document.getElementsByClassName("dF");
+    window.addEventListener('load', onLoad);
+    function initWebSocket() {
+        console.log('Trying to open a WebSocket connection...');
+        websocket = new WebSocket(gateway);
+        websocket.onopen = onOpen;
+        websocket.onclose = onClose;
+        websocket.onerror = onError;
+        websocket.onmessage = onMessage;
+    }
+    function onOpen(event) {
+        console.log('Connection opened');
+        setInterval(checkWS, 5000);
+    }
+    function onClose(event) {
+        console.log('Connection closed');
+        setTimeout(initWebSocket, 3500);
+    }
+    function onError(event) {
+        console.log('Connection lost');
+    }
+    function onMessage(event) {
+        var data = JSON.parse(event.data);
+
+        document.getElementById("devicename").innerHTML = data.Device_name == null ? 'No Connection' : data.Device_name;
+        document.getElementById("SOCbar").innerHTML = data.SOC + '%%';
+        $('#SOCbar').width(Number(data.SOC) + "%%").attr('aria-valuenow', Number(data.SOC));
+
+        document.getElementById("battvolt").innerHTML = data.Voltage + 'V ';
+        document.getElementById("battcurrent").innerHTML = data.Battery_current + 'A ';
+
+        document.getElementById("pannelvolt").innerHTML = data.Panel_voltage + 'V ';
+        document.getElementById("pannelcurrent").innerHTML = data.Panel_power + 'W ';
+
+        document.getElementById("loadcurrent").innerHTML = data.Load_current + 'A ';
+
+        document.getElementById("loadstate").innerHTML = data.Load_output_state;
+
+        document.getElementById("relaystate").innerHTML = data.Relay;
+
+
+        for (var i = 0; i < dataRows.length; i++) {
+            if (dataRows[i].innerHTML.indexOf("undefined") > -1) {
+                dataRows[i].style.display = 'none';
+            } else {
+                dataRows[i].style.display = '';
+            }
+        }
+
+        if (data.ESP_Data.ESP_VCC < 2.6) {
+            document.getElementById("vcc_alert").style.display = '';
+        } else {
+            document.getElementById("vcc_alert").style.display = 'none';
+        }
+
+    }
+
+    function onLoad(event) {
+        initWebSocket();
+    }
+
+    function checkWS() {
+        if(websocket.readyState !== WebSocket.CLOSED)
+        {
+            websocket.send("A9");
+        }
+    }
+</script>
+%pre_foot_template%
+<p hidden>Hidden Helper</p>
