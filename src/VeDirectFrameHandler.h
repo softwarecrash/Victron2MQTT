@@ -30,7 +30,7 @@ public:
 
     int frameIndex;                             // which line of the frame are we on
     int veEnd;                                  // current size (end) of the public buffer
-    int veError = 1;                               //error flag for ve
+    int veError = 1;                            //error flag for ve
 
 private:
     //bool mStop;                               // not sure what Victron uses this for, not using

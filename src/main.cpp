@@ -421,6 +421,7 @@ void prozessData()
   DEBUG_WEBLN("Ve callback triggerd... prozessing data");
   getJsonData();
   notifyClients();
+  Serial.println(myve.veError);
 
   if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
   {
