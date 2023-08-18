@@ -39,7 +39,7 @@ unsigned long RestartTimer = 0;
 byte wsReqInvNum = 1;
 char mqtt_server[80];
 char mqttClientId[80];
-int errorcode;
+//int errorcode;
 uint32_t bootcount = 0;
 
 WiFiClient client;
@@ -389,9 +389,6 @@ void setup()
   MDNS.update();
 }
 
-// end void setup
-
-//----------------------------------------------------------------------
 void loop()
 {
   if (Update.isRunning())
@@ -418,7 +415,6 @@ void loop()
     ESP.reset();
   }
 }
-// End void loop
 
 void prozessData()
 {

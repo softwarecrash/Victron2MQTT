@@ -135,6 +135,7 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 		bool valid = mChecksum == 0;
 		//Serial.println(mChecksum);
 		if (!valid)
+			veError = 0;
 			logE(MODULE,"[CHECKSUM] Invalid frame");
 		mChecksum = 0;
 		mState = IDLE;
@@ -187,6 +188,7 @@ void VeDirectFrameHandler::frameEndEvent(bool valid) {
 				}
 			}
 		}
+		veError = 0;
 	}
 	frameIndex = 0;	// reset frame
 	requestCallback(); //call the callback to do other things with the new data
