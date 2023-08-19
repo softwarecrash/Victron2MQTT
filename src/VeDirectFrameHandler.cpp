@@ -2,22 +2,22 @@
  *
  * Arduino library to read from Victron devices using VE.Direct protocol.
  * Derived from Victron framehandler reference implementation.
- * 
+ *
  * The MIT License
- * 
+ *
  * Copyright (c) 2019 Victron Energy BV
  * Portions Copyright (C) 2020 Chris Terwilliger
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,36 +25,33 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- *  
+ *
  * 2020.05.05 - 0.2 - initial release
  * 2020.06.21 - 0.2 - add MIT license, no code changes
  * 2020.08.20 - 0.3 - corrected #include reference
- * 
+ *
  */
- 
+
 #include <Arduino.h>
 #include "VeDirectFrameHandler.h"
 
-#define MODULE "VE.Frame"	// Victron seems to use this to find out where logging messages were generated
+#define MODULE "VE.Frame" // Victron seems to use this to find out where logging messages were generated
 
 // The name of the record that contains the checksum.
 static constexpr char checksumTagName[] = "CHECKSUM";
 
-VeDirectFrameHandler::VeDirectFrameHandler() :
-	//mStop(false),	// don't know what Victron uses this for, not using
-	mState(IDLE),
-	mChecksum(0),
-	mTextPointer(0),
-    tempName(),
-    tempValue(),
-	frameIndex(0),
-	veName(),
-	veValue(),
-	veEnd(0)
+VeDirectFrameHandler::VeDirectFrameHandler() : // mStop(false),	// don't know what Victron uses this for, not using
+											   mState(IDLE),
+											   mChecksum(0),
+											   mTextPointer(0),
+											   tempName(),
+											   tempValue(),
+											   frameIndex(0),
+											   veName(),
+											   veValue(),
+											   veEnd(0)
 {
 }
-
-
 
 /*
  *	rxData
@@ -63,20 +60,24 @@ VeDirectFrameHandler::VeDirectFrameHandler() :
  */
 void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
-	//Serial.write(inbyte);
-	//if (mStop) return;
-	if ( (inbyte == ':') && (mState != CHECKSUM) ) {
+	// Serial.write(inbyte);
+	// if (mStop) return;
+	if ((inbyte == ':') && (mState != CHECKSUM))
+	{
 		mState = RECORD_HEX;
 	}
-	if (mState != RECORD_HEX) {
+	if (mState != RECORD_HEX)
+	{
 		mChecksum += inbyte;
 	}
 	inbyte = toupper(inbyte);
 
-	switch(mState) {
+	switch (mState)
+	{
 	case IDLE:
 		/* wait for \n of the start of an record */
-		switch(inbyte) {
+		switch (inbyte)
+		{
 		case '\n':
 			mState = RECORD_BEGIN;
 			break;
@@ -92,12 +93,15 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 		break;
 	case RECORD_NAME:
 		// The record name is being received, terminated by a \t
-		switch(inbyte) {
+		switch (inbyte)
+		{
 		case '\t':
 			// the Checksum record indicates a EOR
-			if ( mTextPointer < (mName + sizeof(mName)) ) {
+			if (mTextPointer < (mName + sizeof(mName)))
+			{
 				*mTextPointer = 0; /* Zero terminate */
-				if (strcmp(mName, checksumTagName) == 0) {
+				if (strcmp(mName, checksumTagName) == 0)
+				{
 					mState = CHECKSUM;
 					break;
 				}
@@ -107,17 +111,19 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 			break;
 		default:
 			// add byte to name, but do no overflow
-			if ( mTextPointer < (mName + sizeof(mName)) )
+			if (mTextPointer < (mName + sizeof(mName)))
 				*mTextPointer++ = inbyte;
 			break;
 		}
 		break;
 	case RECORD_VALUE:
 		// The record value is being received.  The \r indicates a new record.
-		switch(inbyte) {
+		switch (inbyte)
+		{
 		case '\n':
 			// forward record, only if it could be stored completely
-			if ( mTextPointer < (mValue + sizeof(mValue)) ) {
+			if (mTextPointer < (mValue + sizeof(mValue)))
+			{
 				*mTextPointer = 0; // make zero ended
 				textRxEvent(mName, mValue);
 			}
@@ -127,7 +133,7 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 			break;
 		default:
 			// add byte to value, but do no overflow
-			if ( mTextPointer < (mValue + sizeof(mValue)) )
+			if (mTextPointer < (mValue + sizeof(mValue)))
 				*mTextPointer++ = inbyte;
 			break;
 		}
@@ -135,10 +141,11 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 	case CHECKSUM:
 	{
 		bool valid = mChecksum == 0;
-		//Serial.println(mChecksum);
-		if (!valid){
+		// Serial.println(mChecksum);
+		if (!valid)
+		{
 			veError = 0;
-			logE((char*)MODULE,(char*)"[CHECKSUM] Invalid frame");
+			logE((char *)MODULE, (char *)"[CHECKSUM] Invalid frame");
 		}
 		mChecksum = 0;
 		mState = IDLE;
@@ -146,10 +153,11 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 		break;
 	}
 	case RECORD_HEX:
-		if (hexRxEvent(inbyte)) {
+		if (hexRxEvent(inbyte))
+		{
 			mChecksum = 0;
 			mState = IDLE;
-			//here put in a callback later
+			// here put in a callback later
 		}
 		break;
 	}
@@ -159,9 +167,10 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
  * textRxEvent
  * This function is called every time a new name/value is successfully parsed.  It writes the values to the temporary buffer.
  */
-void VeDirectFrameHandler::textRxEvent(char * mName, char * mValue) {
-    strcpy(tempName[frameIndex], mName);    // copy name to temporary buffer
-    strcpy(tempValue[frameIndex], mValue);  // copy value to temporary buffer
+void VeDirectFrameHandler::textRxEvent(char *mName, char *mValue)
+{
+	strcpy(tempName[frameIndex], mName);   // copy name to temporary buffer
+	strcpy(tempValue[frameIndex], mValue); // copy value to temporary buffer
 	frameIndex++;
 }
 
@@ -171,53 +180,66 @@ void VeDirectFrameHandler::textRxEvent(char * mName, char * mValue) {
  *  If the name exists in the public buffer, the new value is copied to the public buffer.	If not, a new name/value entry
  *  is created in the public buffer.
  */
-void VeDirectFrameHandler::frameEndEvent(bool valid) {
-	if ( valid ) {
-		for ( int i = 0; i < frameIndex; i++ ) {				// read each name already in the temp buffer
+void VeDirectFrameHandler::frameEndEvent(bool valid)
+{
+	if (valid)
+	{
+		for (int i = 0; i < frameIndex; i++)
+		{ // read each name already in the temp buffer
 			bool nameExists = false;
-			for ( int j = 0; j <= veEnd; j++ ) {				// compare to existing names in the public buffer
-				if ( strcmp(tempName[i], veName[j]) == 0 ) {	
-					strcpy(veValue[j], tempValue[i]);			// overwrite tempValue in the public buffer
+			for (int j = 0; j <= veEnd; j++)
+			{ // compare to existing names in the public buffer
+				if (strcmp(tempName[i], veName[j]) == 0)
+				{
+					strcpy(veValue[j], tempValue[i]); // overwrite tempValue in the public buffer
 					nameExists = true;
 					break;
 				}
 			}
-			if ( !nameExists ) {
-				strcpy(veName[veEnd], tempName[i]);				// write new Name to public buffer
-				strcpy(veValue[veEnd], tempValue[i]);			// write new Value to public buffer
-				veEnd++;										// increment end of public buffer
-				if ( veEnd >= buffLen ) {						// stop any buffer overrun
+			if (!nameExists)
+			{
+				strcpy(veName[veEnd], tempName[i]);	  // write new Name to public buffer
+				strcpy(veValue[veEnd], tempValue[i]); // write new Value to public buffer
+				veEnd++;							  // increment end of public buffer
+				if (veEnd >= buffLen)
+				{ // stop any buffer overrun
 					veEnd = buffLen - 1;
 				}
 			}
 		}
 		veError = 0;
+		requestCallback(); // call the callback to do other things with the new data
 	}
-	frameIndex = 0;	// reset frame
-	requestCallback(); //call the callback to do other things with the new data
+	else
+	{
+		veError = 1;
+	}
+	frameIndex = 0; // reset frame
 }
 
 /*
  *	logE
- *  This function included for continuity and possible future use.	
+ *  This function included for continuity and possible future use.
  */
-void VeDirectFrameHandler::logE(char * module, char * error) {
+void VeDirectFrameHandler::logE(char *module, char *error)
+{
 	Serial.print("MODULE: ");
-    Serial.println(module);
-    Serial.print("ERROR: ");
-    Serial.println(error);
+	Serial.println(module);
+	Serial.print("ERROR: ");
+	Serial.println(error);
 	return;
 }
 
 /*
  *	hexRxEvent
- *  This function included for continuity and possible future use.	
+ *  This function included for continuity and possible future use.
  */
-bool VeDirectFrameHandler::hexRxEvent(uint8_t inbyte) {
-	return true;		// stubbed out for future
+bool VeDirectFrameHandler::hexRxEvent(uint8_t inbyte)
+{
+	return true; // stubbed out for future
 }
 
 void VeDirectFrameHandler::callback(std::function<void()> func) // callback function when finnish request
 {
-    requestCallback = func;
+	requestCallback = func;
 }
