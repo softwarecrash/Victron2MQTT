@@ -54,6 +54,8 @@ VeDirectFrameHandler::VeDirectFrameHandler() :
 {
 }
 
+
+
 /*
  *	rxData
  *  This function is called by the application which passes a byte of serial data
@@ -61,7 +63,7 @@ VeDirectFrameHandler::VeDirectFrameHandler() :
  */
 void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
-	Serial.write(inbyte);
+	//Serial.write(inbyte);
 	//if (mStop) return;
 	if ( (inbyte == ':') && (mState != CHECKSUM) ) {
 		mState = RECORD_HEX;
@@ -134,9 +136,10 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 	{
 		bool valid = mChecksum == 0;
 		//Serial.println(mChecksum);
-		if (!valid)
+		if (!valid){
 			veError = 0;
-			logE(MODULE,"[CHECKSUM] Invalid frame");
+			logE((char*)MODULE,(char*)"[CHECKSUM] Invalid frame");
+		}
 		mChecksum = 0;
 		mState = IDLE;
 		frameEndEvent(valid);
@@ -199,10 +202,10 @@ void VeDirectFrameHandler::frameEndEvent(bool valid) {
  *  This function included for continuity and possible future use.	
  */
 void VeDirectFrameHandler::logE(char * module, char * error) {
-	//Serial.print("MODULE: ");
-    //Serial.println(module);
-    //Serial.print("ERROR: ");
-    //Serial.println(error);
+	Serial.print("MODULE: ");
+    Serial.println(module);
+    Serial.print("ERROR: ");
+    Serial.println(error);
 	return;
 }
 

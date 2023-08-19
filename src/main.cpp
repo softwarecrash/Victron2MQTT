@@ -34,12 +34,13 @@ bool shouldSaveConfig = false;
 bool restartNow = false;
 // bool updateProgress = false;
 bool workerCanRun = true;
+bool dataProzessing = false;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
 byte wsReqInvNum = 1;
 char mqtt_server[80];
 char mqttClientId[80];
-//int errorcode;
+// int errorcode;
 uint32_t bootcount = 0;
 
 WiFiClient client;
@@ -112,7 +113,8 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   case WS_EVT_CONNECT:
     wsClient = client;
     // getJsonData();
-    notifyClients();
+    if (!dataProzessing)
+      notifyClients();
     DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     break;
   case WS_EVT_DISCONNECT:
@@ -120,7 +122,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     wsClient = nullptr;
     break;
   case WS_EVT_DATA:
-    //andleWebSocketMessge(arg, data, len);
+    // handleWebSocketMessge(arg, data, len);
     break;
   case WS_EVT_PONG:
   case WS_EVT_ERROR:
@@ -179,15 +181,15 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
-  //  while (veSerial.available())
-  //  {
-  //   myve.rxData(veSerial.read());
-  //  esp_yield();
-  // }
-  if (veSerial.available())
+  while (veSerial.available())
   {
     myve.rxData(veSerial.read());
+    esp_yield();
   }
+  // if (veSerial.available())
+  //{
+  //   myve.rxData(veSerial.read());
+  // }
 }
 
 void setup()
@@ -399,12 +401,12 @@ void loop()
   {
     // Make sure wifi is in the right mode
     if (WiFi.status() == WL_CONNECTED)
-    {                      // No use going to next step unless WIFI is up and running.
-      //ws.cleanupClients(); // clean unused client connections
+    { // No use going to next step unless WIFI is up and running.
+      // ws.cleanupClients(); // clean unused client connections
       MDNS.update();
       mqttclient.loop(); // Check if we have something to read from MQTT
     }
-    veSerial.write(Serial.read()); // pass the serial to ve
+    // veSerial.write(Serial.read()); // pass the serial to ve
     ReadVEData();
     notificationLED(); // notification LED routine
   }
@@ -418,10 +420,11 @@ void loop()
 
 void prozessData()
 {
+  dataProzessing = true;
   DEBUG_WEBLN("Ve callback triggerd... prozessing data");
   getJsonData();
   notifyClients();
-  Serial.println(myve.veError);
+  //Serial.println(myve.veError);
 
   if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
   {
@@ -429,6 +432,7 @@ void prozessData()
     sendtoMQTT(); // Update data to MQTT server if we should
     mqtttimer = millis();
   }
+  dataProzessing = false;
 }
 
 bool getJsonData()
@@ -538,10 +542,9 @@ bool sendtoMQTT()
   }
   else
   {
-    char data[JSON_BUFFER];
-    serializeJson(Json, data);
-    mqttclient.setBufferSize(JSON_BUFFER + 100);
-    mqttclient.publish((String(mqttDeviceName + "/DATA")).c_str(), data);
+    mqttclient.beginPublish((String(mqttDeviceName + "/DATA")).c_str(), measureJson(Json), false);
+    serializeJson(Json, mqttclient);
+    mqttclient.endPublish();
   }
 
   return true;
