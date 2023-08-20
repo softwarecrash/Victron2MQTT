@@ -187,7 +187,7 @@ void setup()
   resetCounter(true);
   _settings.load();
   WiFi.persistent(true);              // fix wifi save bug
-  AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
+  //AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
   veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX, MYPORT_TX, false);
   veSerial.flush();
@@ -195,19 +195,10 @@ void setup()
 
   Serial.begin(DEBUG_BAUD);
 
-  wm.setSaveConfigCallback(saveConfigCallback);
-
-
-  IPAddress _ip,_gw,_sn,_ns;
-  _ip.fromString(_settings.data.staticIp);
-  _gw.fromString(_settings.data.staticGw);
-  _sn.fromString(_settings.data.staticSn);
-  _ns.fromString(_settings.data.staticNs);
-  wm.setSTAStaticIPConfig(_ip, _gw, _sn, _ns);
-
-  
 
   sprintf(mqttClientId, "%s-%06X", _settings.data.deviceName, ESP.getChipId());
+
+// https://github.com/alanswx/ESPAsyncWiFiManager/issues/72
 
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
   AsyncWiFiManagerParameter custom_mqtt_user("mqtt_user", "MQTT User", NULL, 32);
@@ -218,11 +209,7 @@ void setup()
   AsyncWiFiManagerParameter custom_mqtt_triggerpath("mqtt_triggerpath", "MQTT Data Trigger Path", NULL, 80);
   AsyncWiFiManagerParameter custom_device_name("device_name", "Device Name", "Victron2MQTT", 32);
 
-  AsyncWiFiManagerParameter custom_static_ip("static_ip", "Static IP (Optional)", NULL, 16);
-  AsyncWiFiManagerParameter custom_static_gw("static_gw", "Static Gateway (Optional)", NULL, 16);
-  AsyncWiFiManagerParameter custom_static_sn("static_sn", "Static Subnet (Optional)", NULL, 16);
-  AsyncWiFiManagerParameter custom_static_ns("static_ns", "Static DNS (Optional)", NULL, 16);
-  AsyncWiFiManagerParameter custom_static_ns1("static_ns1", "Static DNS (Optional)1111", NULL, 16);
+  AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_user);
@@ -233,17 +220,12 @@ void setup()
   wm.addParameter(&custom_mqtt_triggerpath);
   wm.addParameter(&custom_device_name);
 
-  wm.addParameter(&custom_static_ip);
-  wm.addParameter(&custom_static_gw);
-  wm.addParameter(&custom_static_sn);
-  wm.addParameter(&custom_static_ns);
-
-    wm.addParameter(&custom_static_ns1); there is not displayed
+  wm.setSaveConfigCallback(saveConfigCallback);
+  //wm.setConnectTimeout(30);       // how long to try to connect for before continuing
+  wm.setConfigPortalTimeout(120); // auto close configportal after n seconds
 
   bool res = wm.autoConnect("Victron2MQTT-AP");
 
-  wm.setConnectTimeout(30);       // how long to try to connect for before continuing
-  wm.setConfigPortalTimeout(120); // auto close configportal after n seconds
 
   // save settings if wifi setup is fire up
   if (shouldSaveConfig)
@@ -256,11 +238,6 @@ void setup()
     strncpy(_settings.data.mqttTopic, custom_mqtt_topic.getValue(), 40);
     _settings.data.mqttRefresh = atoi(custom_mqtt_refresh.getValue());
     strncpy(_settings.data.mqttTriggerPath, custom_mqtt_triggerpath.getValue(), 80);
-
-    strncpy(_settings.data.staticIp, custom_static_ip.getValue(), 16);
-    strncpy(_settings.data.staticGw, custom_static_gw.getValue(), 16);
-    strncpy(_settings.data.staticSn, custom_static_sn.getValue(), 16);
-    strncpy(_settings.data.staticNs, custom_static_ns.getValue(), 16);
 
     _settings.save();
     ESP.restart();
@@ -403,12 +380,6 @@ void setup()
   }
   analogWrite(LED_PIN, 255);
   resetCounter(false);
-  
-
-  Serial.println("local ip");
-  Serial.println(WiFi.localIP());
-  Serial.println(WiFi.gatewayIP());
-  Serial.println(WiFi.subnetMask());
 }
 
 void loop()
