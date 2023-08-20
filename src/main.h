@@ -11,7 +11,7 @@
 #define JSON_BUFFER 2048
 #define MQTT_BUFFER 512
 
-#define FlashSize ESP.getFlashChipSize()
+#define FlashSize ESP.getFreeSketchSpace()
 #define ESP01
 #ifdef ARDUINO_ESP8266_ESP01
 #ifdef MYPORT_TX
