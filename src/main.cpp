@@ -222,6 +222,7 @@ void setup()
   AsyncWiFiManagerParameter custom_static_gw("static_gw", "Static Gateway (Optional)", NULL, 16);
   AsyncWiFiManagerParameter custom_static_sn("static_sn", "Static Subnet (Optional)", NULL, 16);
   AsyncWiFiManagerParameter custom_static_ns("static_ns", "Static DNS (Optional)", NULL, 16);
+  AsyncWiFiManagerParameter custom_static_ns1("static_ns1", "Static DNS (Optional)1111", NULL, 16);
 
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_user);
@@ -236,6 +237,8 @@ void setup()
   wm.addParameter(&custom_static_gw);
   wm.addParameter(&custom_static_sn);
   wm.addParameter(&custom_static_ns);
+
+    wm.addParameter(&custom_static_ns1); there is not displayed
 
   bool res = wm.autoConnect("Victron2MQTT-AP");
 
