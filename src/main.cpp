@@ -399,10 +399,16 @@ void setup()
 
     server.begin();
     MDNS.addService("http", "tcp", 80);
+    MDNS.update();
   }
   analogWrite(LED_PIN, 255);
   resetCounter(false);
-  MDNS.update();
+  
+
+  Serial.println("local ip");
+  Serial.println(WiFi.localIP());
+  Serial.println(WiFi.gatewayIP());
+  Serial.println(WiFi.subnetMask());
 }
 
 void loop()
