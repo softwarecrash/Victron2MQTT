@@ -25,6 +25,11 @@ public:
     unsigned int mqttRefresh; // mqtt refresh time
     bool mqttJson;            // switch between classic mqtt and json
     bool webUIdarkmode;       // flag for dark mode
+    bool StaticNetwork;       // is static network config used?
+    char staticIp[16];        // static ip when
+    char staticGw[16];        // static gateway
+    char staticSn[16];        // static Subnet
+    char staticNs[16];       // static DNS
   } data;
 
   void load()
@@ -98,6 +103,26 @@ private:
     {
       data.webUIdarkmode = false;
     }
+    if (data.StaticNetwork && !data.StaticNetwork)
+    {
+      data.StaticNetwork = false;
+    }
+    if (strlen(data.staticIp) == 0 || strlen(data.staticIp) >= 20)
+    {
+      strcpy(data.staticIp, "");
+    }
+    if (strlen(data.staticGw) == 0 || strlen(data.staticGw) >= 20)
+    {
+      strcpy(data.staticGw, "");
+    }
+        if (strlen(data.staticSn) == 0 || strlen(data.staticSn) >= 20)
+    {
+      strcpy(data.staticSn, "");
+    }
+    if (strlen(data.staticNs) == 0 || strlen(data.staticNs) >= 20)
+    {
+      strcpy(data.staticNs, "");
+    }
   }
   void coVersCheck()
   {
@@ -114,6 +139,11 @@ private:
       data.mqttRefresh = 300;
       data.mqttJson = false;
       data.webUIdarkmode = false;
+      data.StaticNetwork = false;
+      strcpy(data.staticIp, "");
+      strcpy(data.staticGw, "");
+      strcpy(data.staticSn, "");
+      strcpy(data.staticNs, "");
 
       save();
       load();

@@ -197,6 +197,16 @@ void setup()
 
   wm.setSaveConfigCallback(saveConfigCallback);
 
+
+  IPAddress _ip,_gw,_sn,_ns;
+  _ip.fromString(_settings.data.staticIp);
+  _gw.fromString(_settings.data.staticGw);
+  _sn.fromString(_settings.data.staticSn);
+  _ns.fromString(_settings.data.staticNs);
+  wm.setSTAStaticIPConfig(_ip, _gw, _sn, _ns);
+
+  
+
   sprintf(mqttClientId, "%s-%06X", _settings.data.deviceName, ESP.getChipId());
 
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
@@ -208,6 +218,11 @@ void setup()
   AsyncWiFiManagerParameter custom_mqtt_triggerpath("mqtt_triggerpath", "MQTT Data Trigger Path", NULL, 80);
   AsyncWiFiManagerParameter custom_device_name("device_name", "Device Name", "Victron2MQTT", 32);
 
+  AsyncWiFiManagerParameter custom_static_ip("static_ip", "Static IP (Optional)", NULL, 16);
+  AsyncWiFiManagerParameter custom_static_gw("static_gw", "Static Gateway (Optional)", NULL, 16);
+  AsyncWiFiManagerParameter custom_static_sn("static_sn", "Static Subnet (Optional)", NULL, 16);
+  AsyncWiFiManagerParameter custom_static_ns("static_ns", "Static DNS (Optional)", NULL, 16);
+
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_user);
   wm.addParameter(&custom_mqtt_pass);
@@ -216,6 +231,11 @@ void setup()
   wm.addParameter(&custom_mqtt_refresh);
   wm.addParameter(&custom_mqtt_triggerpath);
   wm.addParameter(&custom_device_name);
+
+  wm.addParameter(&custom_static_ip);
+  wm.addParameter(&custom_static_gw);
+  wm.addParameter(&custom_static_sn);
+  wm.addParameter(&custom_static_ns);
 
   bool res = wm.autoConnect("Victron2MQTT-AP");
 
@@ -233,6 +253,11 @@ void setup()
     strncpy(_settings.data.mqttTopic, custom_mqtt_topic.getValue(), 40);
     _settings.data.mqttRefresh = atoi(custom_mqtt_refresh.getValue());
     strncpy(_settings.data.mqttTriggerPath, custom_mqtt_triggerpath.getValue(), 80);
+
+    strncpy(_settings.data.staticIp, custom_static_ip.getValue(), 16);
+    strncpy(_settings.data.staticGw, custom_static_gw.getValue(), 16);
+    strncpy(_settings.data.staticSn, custom_static_sn.getValue(), 16);
+    strncpy(_settings.data.staticNs, custom_static_ns.getValue(), 16);
 
     _settings.save();
     ESP.restart();
@@ -410,7 +435,7 @@ void prozessData()
   DEBUG_WEBLN("Ve callback triggerd... prozessing data");
   getJsonData();
   notifyClients();
-  //Serial.println(myve.veError);
+  // Serial.println(myve.veError);
 
   if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
   {

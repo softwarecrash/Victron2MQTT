@@ -6,7 +6,7 @@
 #define MYPORT_RX 13
 #define LED_PIN 02 //D4 with the LED on Wemos D1 Mini
 
-#define DEBUG_BAUD 19200
+#define DEBUG_BAUD 115200
 
 #define JSON_BUFFER 2048
 #define MQTT_BUFFER 512
