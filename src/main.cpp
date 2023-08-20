@@ -130,18 +130,6 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   }
 }
 
-/* Message callback of WebSerial */
-void recvMsg(uint8_t *data, size_t len)
-{
-  WebSerial.println("Received Data...");
-  String d = "";
-  for (uint i = 0; i < len; i++)
-  {
-    d += char(data[i]);
-  }
-  WebSerial.println(d);
-}
-
 bool resetCounter(bool count)
 {
 
@@ -380,8 +368,6 @@ void setup()
 
     // WebSerial is accessible at "<IP Address>/webserial" in browser
     WebSerial.begin(&server);
-    /* Attach Message Callback */
-    WebSerial.onMessage(recvMsg);
 
     server.begin();
     MDNS.addService("http", "tcp", 80);
