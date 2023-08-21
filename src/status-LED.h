@@ -19,8 +19,7 @@ byte ledState = 0;
 //bool waveHelper = false;
 void notificationLED()
 {
-
-  if (millis() >= (ledTimer + repeatTime) && ledState == 0)
+  if (millis() > (ledTimer + repeatTime) && ledState == 0)
   {
     if (WiFi.status() != WL_CONNECTED)
       ledState = 4;
@@ -28,13 +27,13 @@ void notificationLED()
       ledState = 3;
     else if (strcmp(myve.veValue[0], "") == 0)
       ledState = 2;
-    else if (WiFi.status() == WL_CONNECTED && mqttclient.connected() && myve.veError == 0)
+    else if (WiFi.status() == WL_CONNECTED && (mqttclient.connected() || strlen(_settings.data.mqttServer) <= 0) && myve.veError == 0)
       ledState = 1;
   }
 
   if (ledState > 0)
   {
-    if (millis() >= (cycleMillis + cycleTime) /*&& relaisOn != true*/)
+    if (millis() > (cycleMillis + cycleTime) /*&& relaisOn != true*/)
     {
       if (ledPin == 0)
       {
