@@ -1,4 +1,4 @@
-# Victron2MQTT [![GitHub release](https://img.shields.io/github/release/softwarecrash/Victron2MQTT?include_prereleases=&sort=semver&color=blue)](https://github.com/softwarecrash/Victron2MQTT/releases/latest) ![Discord](https://img.shields.io/discord/1007020337482973254?logo=discord&label=Discord&link=https%3A%2F%2Fdiscord.gg%2F7gTJk22JDE)
+# Victron2MQTT [![GitHub release](https://img.shields.io/github/release/softwarecrash/Victron2MQTT?include_prereleases=&sort=semver&color=blue)](https://github.com/softwarecrash/Victron2MQTT/releases/latest) [![Discord](https://img.shields.io/discord/1007020337482973254?logo=discord&label=Discord)](https://discord.gg/7gTJk22JDE)
 
 Little Program for ESP82XX to get the Victron data to web and MQTT
 
