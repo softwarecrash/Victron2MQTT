@@ -45,7 +45,7 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 
 You are welcome to get fully stocked and tested PCB's. These are then already loaded with the lastest firmware. The earnings from the PCBs are used for the further development of existing and new projects.
 
-[![Victron-PCB](https://github.com/softwarecrash/Victron2MQTT/assets/17761850/a9e6432a-c4de-4376-8cc6-17c29e26fef6)](https://all-solutions.store)
+[<img src="https://github.com/softwarecrash/Victron2MQTT/assets/17761850/a9e6432a-c4de-4376-8cc6-17c29e26fef6" />](https://all-solutions.store)
 
 If interested see [here](https://all-solutions.store)
 
