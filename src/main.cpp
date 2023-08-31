@@ -186,8 +186,8 @@ void setup()
   analogWrite(LED_PIN, 0);
   resetCounter(true);
   _settings.load();
-  WiFi.persistent(true);              // fix wifi save bug
-  //AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
+  WiFi.persistent(true); // fix wifi save bug
+  // AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
   veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX, MYPORT_TX, false);
   veSerial.flush();
@@ -195,10 +195,9 @@ void setup()
 
   Serial.begin(DEBUG_BAUD);
 
-
   sprintf(mqttClientId, "%s-%06X", _settings.data.deviceName, ESP.getChipId());
 
-// https://github.com/alanswx/ESPAsyncWiFiManager/issues/72
+  // https://github.com/alanswx/ESPAsyncWiFiManager/issues/72
 
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
   AsyncWiFiManagerParameter custom_mqtt_user("mqtt_user", "MQTT User", NULL, 32);
@@ -221,11 +220,10 @@ void setup()
   wm.addParameter(&custom_device_name);
 
   wm.setSaveConfigCallback(saveConfigCallback);
-  //wm.setConnectTimeout(30);       // how long to try to connect for before continuing
+  // wm.setConnectTimeout(30);       // how long to try to connect for before continuing
   wm.setConfigPortalTimeout(120); // auto close configportal after n seconds
 
   bool res = wm.autoConnect("Victron2MQTT-AP");
-
 
   // save settings if wifi setup is fire up
   if (shouldSaveConfig)
@@ -390,15 +388,22 @@ void loop()
   }
   if (workerCanRun)
   {
+    // veSerial.write(Serial.read()); // pass the serial to ve
+    ReadVEData();
+
     // Make sure wifi is in the right mode
     if (WiFi.status() == WL_CONNECTED)
     { // No use going to next step unless WIFI is up and running.
-      // ws.cleanupClients(); // clean unused client connections
+      if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
+      {
+        DEBUG_WEBLN("<MQTT> Data Send...");
+        sendtoMQTT(); // Update data to MQTT server if we should
+        mqtttimer = millis();
+      }
+      ws.cleanupClients(); // clean unused client connections
       MDNS.update();
       mqttclient.loop(); // Check if we have something to read from MQTT
     }
-    // veSerial.write(Serial.read()); // pass the serial to ve
-    ReadVEData();
     notificationLED(); // notification LED routine
   }
 
@@ -417,12 +422,12 @@ void prozessData()
   notifyClients();
   // Serial.println(myve.veError);
 
-  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
-  {
-    DEBUG_WEBLN("<MQTT> Data Send...");
-    sendtoMQTT(); // Update data to MQTT server if we should
-    mqtttimer = millis();
-  }
+//  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
+ // {
+ //   DEBUG_WEBLN("<MQTT> Data Send...");
+ //   sendtoMQTT(); // Update data to MQTT server if we should
+ //   mqtttimer = millis();
+ // }
   dataProzessing = false;
 }
 
@@ -432,13 +437,13 @@ bool getJsonData()
   jsonESP["IP"] = WiFi.localIP();
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
   jsonESP["sw_version"] = SOFTWARE_VERSION;
-  jsonESP["Flash_Size"] = ESP.getFlashChipSize();
-  jsonESP["Sketch_Size"] = ESP.getSketchSize();
-  jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
-  jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
-  jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
-  jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
+  //jsonESP["Flash_Size"] = ESP.getFlashChipSize();
+  //jsonESP["Sketch_Size"] = ESP.getSketchSize();
+  //jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+  //jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
+  //jsonESP["Free_Heap"] = ESP.getFreeHeap();
+  //jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  //jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
   for (int i = 0; i < myve.veEnd; i++)
   {
