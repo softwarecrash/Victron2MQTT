@@ -169,15 +169,15 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
-  while (veSerial.available())
+ // while (veSerial.available())
+ // {
+ //   myve.rxData(veSerial.read());
+ //   esp_yield();
+  //}
+   if (veSerial.available())
   {
-    myve.rxData(veSerial.read());
-    esp_yield();
-  }
-  // if (veSerial.available())
-  //{
-  //   myve.rxData(veSerial.read());
-  // }
+     myve.rxData(veSerial.read());
+   }
 }
 
 void setup()
@@ -445,9 +445,17 @@ bool getJsonData()
   // jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
   // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
+
+
+
+
   Serial.println("VE recived data: ");
+  Serial.println(myve.veEnd);
+    const char *descriptor;
+    const char *Vevalue;
   for (int i = 0; i < myve.veEnd; i++)
   {
+    
     Serial.print("[");
     Serial.print(myve.veName[i]);
     Serial.print(":");
@@ -455,38 +463,66 @@ bool getJsonData()
     Serial.print("]");
 
     // in case we found nothing later, fill the data holer
-    const char *descriptor = myve.veName[i];
-    const char *value = myve.veValue[i];
+    descriptor = myve.veName[i];
+    Vevalue = myve.veValue[i];
 
     // if the Name PID, search in the list for the device code
     if (strcmp(myve.veName[i], "PID") == 0)
     {
       for (size_t k = 0; k < sizeof VeDirectDeviceList / sizeof VeDirectDeviceList[0]; k++)
       {
-        if (strcmp(VeDirectDeviceList[k][0], value) == 0)
+        if (strcmp(VeDirectDeviceList[k][0], Vevalue) == 0)
         {
-          value = VeDirectDeviceList[k][1];
+          Json[descriptor] = VeDirectDeviceList[k][1];
+          //Vevalue = VeDirectDeviceList[k][1];
           break;
         }
       }
     }
 
-    // search for every value in the list and replace it with clear name
+    // search for every Vevalue in the list and replace it with clear name
     for (size_t j = 0; j < sizeof VePrettyData / sizeof VePrettyData[0]; j++)
     {
       if (strcmp(VePrettyData[j][0], myve.veName[i]) == 0) // search the real descriptor in the array
       {
         descriptor = VePrettyData[j][1];
-        // check if we have a data operator
-        if (strlen(VePrettyData[j][2]) > 0)
+
+    // if the Name PID, search in the list for the device code
+    if (strcmp(myve.veName[i], "PID") == 0)
+    {
+      for (size_t k = 0; k < sizeof VeDirectDeviceList / sizeof VeDirectDeviceList[0]; k++)
+      {
+        if (strcmp(VeDirectDeviceList[k][0], Vevalue) == 0)
         {
-          dtostrf((atof(myve.veValue[i]) / atof(VePrettyData[j][2])), 0, 2, (char *)value);
+          Json[descriptor] = VeDirectDeviceList[k][1];
+          //Vevalue = VeDirectDeviceList[k][1];
+          break;
+        }
+      }
+    }
+
+
+
+
+
+
+        // check if we have a data operator
+        if (strlen(VePrettyData[j][2]) > 0 && strcmp(VePrettyData[j][2], "0") != 0)
+        {
+          //dtostrf((atof(myve.veValue[i]) / atoi(VePrettyData[j][2])), 0, 2, (char *)Vevalue);
+          Json[descriptor] = (int)((atof(myve.veValue[i]) / atoi(VePrettyData[j][2]))* 100 + 0.5) / 100.0;
+
+        } else if(strcmp(VePrettyData[j][2],"0") == 0){
+          Json[descriptor] = atoi(myve.veValue[i]);
+        } else {
+          Json[descriptor] = myve.veValue[i];
         }
         break; // if we have found and prozessed the data, break the loop
       }
     }
+    
     // put it all back to the json data
-    Json[descriptor] = value;
+    //Json[descriptor] = Vevalue;
   }
   Serial.println();
   return true;

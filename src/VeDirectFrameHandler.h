@@ -11,7 +11,7 @@
 #ifndef FRAMEHANDLER_H_
 #define FRAMEHANDLER_H_
 
-const byte frameLen = 22;                       // VE.Direct Protocol: max frame size is 18
+const byte frameLen = 22;                       // VE.Direct Protocol: max frame size is 22
 const byte nameLen = 9;                         // VE.Direct Protocol: max name size is 9 including /0
 const byte valueLen = 33;                       // VE.Direct Protocol: max value size is 33 including /0
 const byte buffLen = 40;                        // Maximum number of lines possible from the device. Current protocol shows this to be the BMV700 at 33 lines.
