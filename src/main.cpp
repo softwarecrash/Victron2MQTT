@@ -244,8 +244,8 @@ void setup()
   topic = _settings.data.mqttTopic;
   mqttclient.setServer(_settings.data.mqttServer, _settings.data.mqttPort);
   mqttclient.setCallback(mqttCallback);
-  mqttclient.setBufferSize(MQTT_BUFFER);
-  // check is WiFi connected
+  // mqttclient.setBufferSize(MQTT_BUFFER);
+  //  check is WiFi connected
 
   if (res)
   {
@@ -422,12 +422,12 @@ void prozessData()
   notifyClients();
   // Serial.println(myve.veError);
 
-//  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
- // {
- //   DEBUG_WEBLN("<MQTT> Data Send...");
- //   sendtoMQTT(); // Update data to MQTT server if we should
- //   mqtttimer = millis();
- // }
+  //  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
+  // {
+  //   DEBUG_WEBLN("<MQTT> Data Send...");
+  //   sendtoMQTT(); // Update data to MQTT server if we should
+  //   mqtttimer = millis();
+  // }
   dataProzessing = false;
 }
 
@@ -437,16 +437,23 @@ bool getJsonData()
   jsonESP["IP"] = WiFi.localIP();
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
   jsonESP["sw_version"] = SOFTWARE_VERSION;
-  //jsonESP["Flash_Size"] = ESP.getFlashChipSize();
-  //jsonESP["Sketch_Size"] = ESP.getSketchSize();
-  //jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
-  //jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
-  //jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  //jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
-  //jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
+  // jsonESP["Flash_Size"] = ESP.getFlashChipSize();
+  // jsonESP["Sketch_Size"] = ESP.getSketchSize();
+  // jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+  // jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
+  // jsonESP["Free_Heap"] = ESP.getFreeHeap();
+  // jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
+  Serial.println("VE recived data: ");
   for (int i = 0; i < myve.veEnd; i++)
   {
+    Serial.print("[");
+    Serial.print(myve.veName[i]);
+    Serial.print(":");
+    Serial.print(myve.veValue[i]);
+    Serial.print("]");
+
     // in case we found nothing later, fill the data holer
     const char *descriptor = myve.veName[i];
     const char *value = myve.veValue[i];
@@ -481,7 +488,7 @@ bool getJsonData()
     // put it all back to the json data
     Json[descriptor] = value;
   }
-
+  Serial.println();
   return true;
 }
 
@@ -492,6 +499,8 @@ bool connectMQTT()
     if (mqttclient.connect(mqttClientId, _settings.data.mqttUser, _settings.data.mqttPassword, (topic + "/Alive").c_str(), 0, true, "false", true))
     {
       mqttclient.publish((topic + String("/IP")).c_str(), String(WiFi.localIP().toString()).c_str());
+      mqttclient.publish((topic + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
+      mqttclient.publish((topic + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
 
       if (strlen(_settings.data.mqttTriggerPath) > 0)
       {
