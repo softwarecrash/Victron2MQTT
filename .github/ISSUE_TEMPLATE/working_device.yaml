@@ -1,0 +1,18 @@
+name: Working device
+description: Report a new working device
+title: New working device
+labels: ["working device"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this report!
+  - type: textarea
+    id: device-type
+    attributes:
+      label: What device are you using?
+      description: Also tell us, wich firmware version you are using?
+      placeholder: Tell us what you are using!
+      value: "A new working device!"
+    validations:
+      required: true
