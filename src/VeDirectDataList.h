@@ -5,7 +5,7 @@ static const char * const VePrettyData[][3]{
 {"V3","Voltage_3", "1000",},
 {"VS","Starter_voltage", "1000",},
 {"VM","Mid_voltage", "1000",},
-{"DM","Mid_deviation", "",},
+{"DM","Mid_deviation", "10",},
 {"VPV","Panel_voltage", "1000",}, // display in webUI | Dont edit
 {"PPV","Panel_power", "0",}, // display in webUI | Dont edit
 {"I","Battery_current","1000"}, // display in webUI | Dont edit
@@ -30,7 +30,7 @@ static const char * const VePrettyData[][3]{
 {"H6", "Cumulative_Ah_drawn", "1000"},
 {"H7", "Minimum_voltage", "1000"},
 {"H8", "Maximum_voltage", "1000"},
-{"H9", "Last_full_charge", "0"},
+{"H9", "Last_full_charge", "3600"},
 {"H10", "Num_automatic_sync", "0"},
 {"H11", "Num_low_volt_alarms", "0"},
 {"H12", "Num_high_volt_alarms", "0"},
