@@ -569,10 +569,7 @@ bool sendtoMQTT()
 
     for (JsonPair i : Json.as<JsonObject>())
     {
-      if (strcmp(i.key().c_str(), "ESP_Data") == 0)
         mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<String>().c_str());
-      else
-        mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<const char *>());
     }
   }
   else
