@@ -169,12 +169,12 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
-   while (veSerial.available())
-   {
-     myve.rxData(veSerial.read());
-     esp_yield();
+  while (veSerial.available())
+  {
+    myve.rxData(veSerial.read());
+    esp_yield();
   }
- // if (veSerial.available())
+  // if (veSerial.available())
   //{
   //  myve.rxData(veSerial.read());
   //}
@@ -288,6 +288,15 @@ void setup()
                 _settings.reset();
                 ESP.eraseConfig();
                 ESP.reset(); });
+
+    server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+      AsyncWebParameter *p = request->getParam(0);
+      if (p->name() == "ha")
+      {
+        sendHaDiscovery();
+        }
+        request->send(200, "text/plain", "message received"); });
 
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
               {
@@ -569,7 +578,7 @@ bool sendtoMQTT()
 
     for (JsonPair i : Json.as<JsonObject>())
     {
-        mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<String>().c_str());
+      mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<String>().c_str());
     }
   }
   else
@@ -605,4 +614,39 @@ void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
     mqtttimer = 0;
   }
   // updateProgress = false; // start data servicing again
+}
+
+bool sendHaDiscovery()
+{
+  if (!connectMQTT())
+  {
+    return false;
+  }
+  static const char *const haDescriptor[][3]{
+      // state_topic, icon, unit_ofmeasurement
+      {"Voltage", "mdi:battery-arrow-up-outline", "<Volt>"} // display in webUI | Dont edit
+  };
+  char topBuff[128];
+  char configBuff[512];
+  for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
+  {
+    if (Json.containsKey(haDescriptor[i][0]))
+    {
+      sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
+
+      sprintf(configBuff, "{\"state_topic\": \"<device_name>/Amount_charged_energy\",\"unique_id\": \"sensor.<device_name>_amount_charged_energy\",\"name\": \"<device_name> Amount charged Energy\",\"icon\": \"mdi:battery-arrow-up-outline\",\"unit_of_measurement\": \"<kWh>\",}", _settings.data.deviceName, haDescriptor[i][0]);
+
+
+{
+"state_topic": "<device_name>/Amount_charged_energy",
+"unique_id": "sensor.<device_name>_amount_charged_energy",
+"name": "<device_name> Amount charged Energy",
+"icon": "mdi:battery-arrow-up-outline",
+"unit_of_measurement": "<kWh>",
+}
+
+
+      mqttclient.publish(topBuff, configBuff);
+    }
+  }
 }
