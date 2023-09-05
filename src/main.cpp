@@ -634,16 +634,10 @@ bool sendHaDiscovery()
     {
       sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
 
-      sprintf(configBuff, "{\"state_topic\": \"<device_name>/Amount_charged_energy\",\"unique_id\": \"sensor.<device_name>_amount_charged_energy\",\"name\": \"<device_name> Amount charged Energy\",\"icon\": \"mdi:battery-arrow-up-outline\",\"unit_of_measurement\": \"<kWh>\",}", _settings.data.deviceName, haDescriptor[i][0]);
+      sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s %s\",\"icon\": \"%s\",\"unit_of_measurement\": \"%s\",}",
+       _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2]);
 
 
-{
-"state_topic": "<device_name>/Amount_charged_energy",
-"unique_id": "sensor.<device_name>_amount_charged_energy",
-"name": "<device_name> Amount charged Energy",
-"icon": "mdi:battery-arrow-up-outline",
-"unit_of_measurement": "<kWh>",
-}
 
 
       mqttclient.publish(topBuff, configBuff);
