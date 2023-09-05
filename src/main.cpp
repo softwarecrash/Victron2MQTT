@@ -622,9 +622,9 @@ bool sendHaDiscovery()
   {
     return false;
   }
-  static const char *const haDescriptor[][3]{
-      // state_topic, icon, unit_ofmeasurement
-      {"Voltage", "mdi:battery-arrow-up-outline", "Volt"}
+  static const char *const haDescriptor[][4]{
+      // state_topic, icon, unit_ofmeasurement, class
+      {"Voltage", "mdi:battery-arrow-up-outline", "Volt", "voltage"}
   };
   char topBuff[128];
   char configBuff[512];
@@ -634,8 +634,8 @@ bool sendHaDiscovery()
     {
       sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
 
-      sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s %s\",\"icon\": \"%s\",\"unit_of_measurement\": \"%s\"}",
-       _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2]);
+      sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s %s\",\"icon\": \"%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\"}",
+       _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2], haDescriptor[i][3]);
 
 
 
