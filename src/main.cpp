@@ -628,6 +628,7 @@ bool sendHaDiscovery()
   };
   char topBuff[128];
   char configBuff[512];
+  mqttclient.setBufferSize(512);
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
     if (Json.containsKey(haDescriptor[i][0]))
@@ -637,9 +638,10 @@ bool sendHaDiscovery()
       sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s %s\",\"icon\": \"%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\"}",
        _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2], haDescriptor[i][3]);
 
-
-
       mqttclient.publish(topBuff, configBuff);
+
+
+
     }
   }
   return true;
