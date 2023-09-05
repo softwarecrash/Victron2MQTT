@@ -169,15 +169,15 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
-  // while (veSerial.available())
-  // {
-  //   myve.rxData(veSerial.read());
-  //   esp_yield();
-  //}
-  if (veSerial.available())
-  {
-    myve.rxData(veSerial.read());
+   while (veSerial.available())
+   {
+     myve.rxData(veSerial.read());
+     esp_yield();
   }
+ // if (veSerial.available())
+  //{
+  //  myve.rxData(veSerial.read());
+  //}
 }
 
 void setup()
