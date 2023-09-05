@@ -54,3 +54,9 @@ bool sendtoMQTT();
  * 
  */
 void prozessData();
+
+/***
+ * 
+ * 
+*/
+bool  sendHaDiscovery();
