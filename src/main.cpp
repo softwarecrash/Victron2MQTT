@@ -630,15 +630,9 @@ bool sendHaDiscovery()
   {
     return false;
   }
-  static const char *const haDescriptor[][4]{
-      // state_topic, icon, unit_ofmeasurement, class
-      {"Voltage", "battery-arrow-up-outline", "Volt", "voltage"},
-      {"Voltage", "battery-arrow-up-outline", "Volt", "voltage"},
-      {"Voltage", "battery-arrow-up-outline", "Volt", "voltage"}};
   char topBuff[128];
   char configBuff[512];
-  int mqttContentLength;
-  // mqttclient.setBufferSize(512);
+  size_t mqttContentLength;
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
     if (Json.containsKey(haDescriptor[i][0]))
