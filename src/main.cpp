@@ -35,6 +35,7 @@ bool restartNow = false;
 // bool updateProgress = false;
 bool workerCanRun = true;
 bool dataProzessing = false;
+bool haDiscTrigger = false;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
 byte wsReqInvNum = 1;
@@ -294,7 +295,8 @@ void setup()
       AsyncWebParameter *p = request->getParam(0);
       if (p->name() == "ha")
       {
-        sendHaDiscovery();
+        haDiscTrigger = true;
+        //sendHaDiscovery();
         }
         request->send(200, "text/plain", "message received"); });
 
@@ -414,6 +416,12 @@ void loop()
       mqttclient.loop(); // Check if we have something to read from MQTT
     }
     notificationLED(); // notification LED routine
+
+    if (haDiscTrigger)
+    {
+      sendHaDiscovery();
+      haDiscTrigger = false;
+    }
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))
@@ -626,21 +634,26 @@ bool sendHaDiscovery()
       // state_topic, icon, unit_ofmeasurement, class
       {"Voltage", "battery-arrow-up-outline", "Volt", "voltage"},
       {"Voltage", "battery-arrow-up-outline", "Volt", "voltage"},
-      {"Voltage", "battery-arrow-up-outline", "Volt", "voltage"}
-      };
+      {"Voltage", "battery-arrow-up-outline", "Volt", "voltage"}};
   char topBuff[128];
   char configBuff[512];
-  mqttclient.setBufferSize(512);
+  int mqttContentLength;
+  // mqttclient.setBufferSize(512);
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
     if (Json.containsKey(haDescriptor[i][0]))
     {
       sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
 
-      sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s %s\",\"icon\": \"mdi:%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\"}",
-              _settings.data.mqttTopic, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2], haDescriptor[i][3]);
+      mqttContentLength = sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s %s\",\"icon\": \"%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\"}",
+                                  _settings.data.mqttTopic, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2], haDescriptor[i][3]);
 
-      mqttclient.publish(topBuff, configBuff);
+      mqttclient.beginPublish(topBuff, mqttContentLength, false);
+      for (size_t i = 0; i < mqttContentLength; i++)
+      {
+        mqttclient.write(configBuff[i]);
+      }
+      mqttclient.endPublish();
     }
   }
   return true;
