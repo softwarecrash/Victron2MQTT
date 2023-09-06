@@ -8,7 +8,7 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 - get essential data over webinterface, get all data like cell voltage and more over MQTT
 - get Json over web at /livejson?
 - firmware update over webinterface
-- [Homeassistant Discovery][https://github.com/softwarecrash/Victron2MQTT/wiki/Integration#homeassistant)
+- [Homeassistant Discovery](https://github.com/softwarecrash/Victron2MQTT/wiki/Integration#homeassistant)
 
 **Main screen:**
 
