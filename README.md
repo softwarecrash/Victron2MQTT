@@ -40,6 +40,12 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 - surf to 192.168.4.1 and set up your wifi and optional MQTT
 - that's it :)
 
+### How-To video by Jarnsen
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=4kO6WVnofig" target="_blank">
+ <img src="http://img.youtube.com/vi/4kO6WVnofig/0.jpg" alt="Watch the video" />
+</a>
+
 # Completely assembled and tested PCB's
 
 You are welcome to get fully stocked and tested PCB's. These are then already loaded with the lastest firmware. The earnings from the PCBs are used for the further development of existing and new projects.
