@@ -568,6 +568,18 @@ bool getJsonData()
             }
           }
         }
+        // if the Name MPPT - Tracker_operation_mode, search in the list for the device code
+        if (strcmp(descriptor, "Tracker_operation_mode") == 0)
+        {
+          for (size_t k = 0; k < sizeof VeDirectDeviceCodeMPPT / sizeof VeDirectDeviceCodeMPPT[0]; k++)
+          {
+            if (strcmp(VeDirectDeviceCodeMPPT[k][0], Vevalue) == 0)
+            {
+              Json[descriptor] = VeDirectDeviceCodeMPPT[k][1];
+              break;
+            }
+          }
+        }
         break; // if we have found and prozessed the data, break the loop
       }
     }
