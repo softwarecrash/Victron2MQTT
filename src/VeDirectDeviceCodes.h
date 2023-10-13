@@ -1,4 +1,4 @@
-// AR
+// AR (Alarm_code)
 static const char * const VeDirectDeviceCodeAR[][25]{
     {"1", "Low Voltage"},
     {"2", "High Voltage"},
@@ -14,64 +14,70 @@ static const char * const VeDirectDeviceCodeAR[][25]{
     {"2048", "LHigh V AC out"},
     {"4096", "Short Circuit"},
     {"8192", "BMS Lockout"}};
-/*
-OR
-Off reason, this field described why a unit is switched off.
-No input power 0x00000001
-Switched off (power switch) 0x00000002
-Switched off (device mode register) 0x00000004
-Remote input 0x00000008
-Protection active 0x00000010
-Paygo 0x00000020
-BMS 0x00000040
-Engine shutdown detection 0x00000080
-Analysing input voltage 0x00000100
 
-AP_BLE
-Off reason, this field described why a unit is switched off.
-BLE supports switching off 0x00000001
-BLE switching off is permanent 0x00000002
+// OR (off_reason)
+static const char * const VeDirectDeviceCodeOR[][36]{
+    {"0X00000000", "None"},
+    {"0X00000001", "No input power"},
+    {"0X00000002", "Switched off (power switch)"},
+    {"0X00000004", "Switched off (device mode register)"},
+    {"0X00000008", "Remote input"},
+    {"0X00000010", "Protection active"},
+    {"0X00000020", "Paygo"},
+    {"0X00000040", "BMS"},
+    {"0X00000080", "Engine shutdown detection"},
+    {"0X00000100", "Analysing input voltage"},};
 
-CS
-The state of operation. See the table below for the possible values.
-MPPT Inverter Charger
-Off 0 • • •
-Low power 1 • (1)
-Fault 2 • • •
-Bulk 3 • •
-Absorption 4 • •
-Float 5 • •
-Storage 6 •
-Equalize (manual) 7 •
-Inverting 9 •
-Power supply 11 •
-Starting-up 245 •
-Repeated absorption 246 •
-Auto equalize / Recondition 247 • •
-BatterySafe 248 •
-External Control 252
+// AP_BLE
+static const char * const VeDirectDeviceCodeAP_BLE[][32]{
+    {"0X00000001", "BLE supports switching off"},
+    {"0X00000002", "BLE switching off is permanent"},};
 
-ERR
-The error code of the device (relevant when the device is in the fault state). See the table below for
-the possible values.
-No error 0
-Battery voltage too high 2
-Charger temperature too high 17
-Charger over current 18
-Charger current reversed 19
-Bulk time limit exceeded 20
-Current sensor issue (sensor bias/sensor broken) 21
-Terminals overheated 26
-Converter issue (dual converter models only) 28
-Input voltage too high (solar panel) 33
-Input current too high (solar panel) 34
-Input shutdown (due to excessive battery voltage) 38
-Input shutdown (due to current flow during off mode) 39
-Lost communication with one of devices 65
-Synchronised charging device configuration issue 66
-BMS connection lost 67
-Network misconfigured 68
-Factory calibration data lost 116
-Invalid/incompatible firmware 117
-User settings invalid 119
-*/
+
+
+// CS (operation_state)
+static const char * const VeDirectDeviceCodeCS[][28]{
+    {"0", "Off"},
+    {"1", "Low power"},
+    {"2", "Fault"},
+    {"3", "Bulk"},
+    {"4", "Absorption"},
+    {"5", "Float"},
+    {"6", "Storage"},
+    {"7", "Equalize (manual)"},
+    {"9", "Inverting"},
+    {"11", "Power supply"},
+    {"245", "Starting-up"},
+    {"246", "Repeated absorption"},
+    {"247", "Auto equalize / Recondition"},
+    {"248", "BatterySafe"},
+    {"252", "External Control"},};
+
+// ERR (Current_error)
+static const char * const VeDirectDeviceCodeERR[][50]{
+    {"0", "No error"},
+    {"2", "Battery voltage too high"},
+    {"17", "Charger temperature too high"},
+    {"18", "Charger over current"},
+    {"19", "Charger current reversed"},
+    {"20", "Bulk time limit exceeded"},
+    {"21", "Current sensor issue (sensor bias/sensor broken)"},
+    {"26", "Terminals overheated"},
+    {"28", "Converter issue"},
+    {"33", "Input voltage too high (solar panel)"},
+    {"34", "Input current too high (solar panel)"},
+    {"38", "Input shutdown (excessive battery voltage)"},
+    {"39", "Input shutdown (current flow during off mode)"},
+    {"65", "Lost communication with one of devices"},
+    {"66", "Synchronised charging device configuration issue"},
+    {"67", "BMS connection lost"},
+    {"68", "Network misconfigured"},
+    {"116", "Factory calibration data lost"},
+    {"117", "Invalid/incompatible firmware"},
+    {"119", "User settings invalid"},};
+
+// MPPT (Tracker_operation_mode)
+static const char * const VeDirectDeviceCodeMPPT[][28]{
+    {"0", "Off"},
+    {"1", "Voltage or current limited"},
+    {"2", "MPP Tracker active"},};
