@@ -508,7 +508,7 @@ bool getJsonData()
           Json[descriptor] = myve.veValue[i];
         }
 
-        // if the Name PID, search in the list for the device code
+        // if the Name Device_Model, search in the list for the device code
         if (strcmp(descriptor, "Device_model") == 0)
         {
           for (size_t k = 0; k < sizeof VeDirectDeviceList / sizeof VeDirectDeviceList[0]; k++)
@@ -520,7 +520,54 @@ bool getJsonData()
             }
           }
         }
-
+        // if the Name AR - Alarm_code, search in the list for the device code
+        if (strcmp(descriptor, "Alarm_code") == 0)
+        {
+          for (size_t k = 0; k < sizeof VeDirectDeviceCodeAR / sizeof VeDirectDeviceCodeAR[0]; k++)
+          {
+            if (strcmp(VeDirectDeviceCodeAR[k][0], Vevalue) == 0)
+            {
+              Json[descriptor] = VeDirectDeviceCodeAR[k][1];
+              break;
+            }
+          }
+        }
+        // if the Name OR - Off_reason, search in the list for the device code
+        if (strcmp(descriptor, "Off_reason") == 0)
+        {
+          for (size_t k = 0; k < sizeof VeDirectDeviceCodeOR / sizeof VeDirectDeviceCodeOR[0]; k++)
+          {
+            if (strcmp(VeDirectDeviceCodeOR[k][0], Vevalue) == 0)
+            {
+              Json[descriptor] = VeDirectDeviceCodeOR[k][1];
+              break;
+            }
+          }
+        }
+        // if the Name CS - Operation_state, search in the list for the device code
+        if (strcmp(descriptor, "Operation_state") == 0)
+        {
+          for (size_t k = 0; k < sizeof VeDirectDeviceCodeCS / sizeof VeDirectDeviceCodeCS[0]; k++)
+          {
+            if (strcmp(VeDirectDeviceCodeCS[k][0], Vevalue) == 0)
+            {
+              Json[descriptor] = VeDirectDeviceCodeCS[k][1];
+              break;
+            }
+          }
+        }
+        // if the Name ERR - Current_error, search in the list for the device code
+        if (strcmp(descriptor, "Current_error") == 0)
+        {
+          for (size_t k = 0; k < sizeof VeDirectDeviceCodeERR / sizeof VeDirectDeviceCodeERR[0]; k++)
+          {
+            if (strcmp(VeDirectDeviceCodeERR[k][0], Vevalue) == 0)
+            {
+              Json[descriptor] = VeDirectDeviceCodeERR[k][1];
+              break;
+            }
+          }
+        }
         break; // if we have found and prozessed the data, break the loop
       }
     }
