@@ -395,7 +395,6 @@ void setup()
 
 void loop()
 {
-  Serial.println(ESP.getFreeHeap());
   if (Update.isRunning())
   {
     workerCanRun = false;
