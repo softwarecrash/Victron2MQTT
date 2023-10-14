@@ -114,7 +114,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     wsClient = client;
-    if (!dataProzessing && wsClient != nullptr && wsClient->canSend())
+    if (!dataProzessing /*&& wsClient != nullptr && wsClient->canSend()*/)
       notifyClients();
     DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     break;
@@ -177,8 +177,8 @@ void ReadVEData()
   }
   // if (veSerial.available())
   //{
-  //  myve.rxData(veSerial.read());
-  //}
+ //   myve.rxData(veSerial.read());
+ //}
 }
 
 void setup()
