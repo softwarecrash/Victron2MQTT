@@ -1,5 +1,5 @@
 // AR (Alarm_code)
-static const char * const VeDirectDeviceCodeAR[][2]{
+static const char * VeDirectDeviceCodeAR[][2] PROGMEM{
     {"1", "Low Voltage"},
     {"2", "High Voltage"},
     {"4", "Low SOC"},
@@ -16,7 +16,7 @@ static const char * const VeDirectDeviceCodeAR[][2]{
     {"8192", "BMS Lockout"}};
 
 // OR (off_reason)
-static const char * const VeDirectDeviceCodeOR[][2]{
+static const char * VeDirectDeviceCodeOR[][2] PROGMEM{
     {"0X00000000", "None"},
     {"0X00000001", "No input power"},
     {"0X00000002", "Switched off (power switch)"},
@@ -26,17 +26,16 @@ static const char * const VeDirectDeviceCodeOR[][2]{
     {"0X00000020", "Paygo"},
     {"0X00000040", "BMS"},
     {"0X00000080", "Engine shutdown detection"},
-    {"0X00000100", "Analysing input voltage"},};
-
+    {"0X00000100", "Analysing input voltage"},
+};
+/*
 // AP_BLE
-static const char * const VeDirectDeviceCodeAP_BLE[][2]{
+static const char * VeDirectDeviceCodeAP_BLE[][2] PROGMEM{
     {"0X00000001", "BLE supports switching off"},
-    {"0X00000002", "BLE switching off is permanent"},};
-
-
-
+    {"0X00000002", "BLE switching off is permanent"}};
+*/
 // CS (operation_state)
-static const char * const VeDirectDeviceCodeCS[][2]{
+static const char * VeDirectDeviceCodeCS[][2] PROGMEM{
     {"0", "Off"},
     {"1", "Low power"},
     {"2", "Fault"},
@@ -51,10 +50,10 @@ static const char * const VeDirectDeviceCodeCS[][2]{
     {"246", "Repeated absorption"},
     {"247", "Auto equalize / Recondition"},
     {"248", "BatterySafe"},
-    {"252", "External Control"},};
+    {"252", "External Control"}};
 
 // ERR (Current_error)
-static const char * const VeDirectDeviceCodeERR[][2]{
+static const char * VeDirectDeviceCodeERR[][2] PROGMEM{
     {"0", "No error"},
     {"2", "Battery voltage too high"},
     {"17", "Charger temperature too high"},
@@ -74,10 +73,10 @@ static const char * const VeDirectDeviceCodeERR[][2]{
     {"68", "Network misconfigured"},
     {"116", "Factory calibration data lost"},
     {"117", "Invalid/incompatible firmware"},
-    {"119", "User settings invalid"},};
+    {"119", "User settings invalid"}};
 
 // MPPT (Tracker_operation_mode)
-static const char * const VeDirectDeviceCodeMPPT[][2]{
+static const char * VeDirectDeviceCodeMPPT[][2] PROGMEM{
     {"0", "Off"},
     {"1", "Voltage or current limited"},
-    {"2", "MPP Tracker active"},};
+    {"2", "MPP Tracker active"}};

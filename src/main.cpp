@@ -170,15 +170,15 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
-  while (veSerial.available())
+ // while (veSerial.available())
+  //{
+  //  myve.rxData(veSerial.read());
+  //  esp_yield();
+ // }
+   if (veSerial.available())
   {
     myve.rxData(veSerial.read());
-    esp_yield();
-  }
-  // if (veSerial.available())
-  //{
- //   myve.rxData(veSerial.read());
- //}
+ }
 }
 
 void setup()
@@ -296,7 +296,6 @@ void setup()
       if (p->name() == "ha")
       {
         haDiscTrigger = true;
-        //sendHaDiscovery();
         }
         request->send(200, "text/plain", "message received"); });
 
@@ -386,6 +385,9 @@ void setup()
     server.begin();
     MDNS.addService("http", "tcp", 80);
     MDNS.update();
+
+  jsonESP["IP"] = WiFi.localIP();
+  jsonESP["sw_version"] = SOFTWARE_VERSION;
   }
   analogWrite(LED_PIN, 255);
   resetCounter(false);
@@ -393,13 +395,13 @@ void setup()
 
 void loop()
 {
+  Serial.println(ESP.getFreeHeap());
   if (Update.isRunning())
   {
     workerCanRun = false;
   }
   if (workerCanRun)
   {
-    // veSerial.write(Serial.read()); // pass the serial to ve
     ReadVEData();
 
     // Make sure wifi is in the right mode
@@ -437,29 +439,21 @@ void prozessData()
   DEBUG_WEBLN("Ve callback triggerd... prozessing data");
   getJsonData();
   notifyClients();
-  // Serial.println(myve.veError);
-
-  //  if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
-  // {
-  //   DEBUG_WEBLN("<MQTT> Data Send...");
-  //   sendtoMQTT(); // Update data to MQTT server if we should
-  //   mqtttimer = millis();
-  // }
   dataProzessing = false;
 }
 
 bool getJsonData()
 {
-  jsonESP["ESP_VCC"] = ESP.getVcc() / 1000.0;
-  jsonESP["IP"] = WiFi.localIP();
+  jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
+
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
-  jsonESP["sw_version"] = SOFTWARE_VERSION;
+
   // jsonESP["Flash_Size"] = ESP.getFlashChipSize();
   // jsonESP["Sketch_Size"] = ESP.getSketchSize();
-  // jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+   jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
   // jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
-  // jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  // jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+   jsonESP["Free_Heap"] = ESP.getFreeHeap();
+   jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
   // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
   Serial.println("VE recived data: ");
@@ -468,6 +462,7 @@ bool getJsonData()
   const char *Vevalue;
 
   String rawVal;
+  
   for (int i = 0; i < myve.veEnd; i++)
   {
 
@@ -509,12 +504,14 @@ bool getJsonData()
         }
         
         // if the Name Device_Model, search in the list for the device code
-        if (strcmp(descriptor, "Device_model") == 0 && !deviceModelSet)
+        if (strcmp(descriptor, "Device_model") == 0)
         {
-          for (size_t k = 0; k < sizeof VeDirectDeviceList / sizeof VeDirectDeviceList[0]; k++)
+          Serial.println("device type section found");
+          for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(**VeDirectDeviceList[0]); k++)
           {
             if (strcmp(VeDirectDeviceList[k][0], Vevalue) == 0)
             {
+              Serial.println(VeDirectDeviceList[k][1]);
               Json[descriptor] = VeDirectDeviceList[k][1];
               deviceModelSet = true;
               break;
@@ -524,7 +521,7 @@ bool getJsonData()
         // if the Name AR - Alarm_code, search in the list for the device code
         if (strcmp(descriptor, "Alarm_code") == 0)
         {
-          for (size_t k = 0; k < sizeof VeDirectDeviceCodeAR / sizeof VeDirectDeviceCodeAR[0]; k++)
+          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeAR) / sizeof(VeDirectDeviceCodeAR[0]); k++)
           {
             if (strcmp(VeDirectDeviceCodeAR[k][0], Vevalue) == 0)
             {
@@ -536,7 +533,7 @@ bool getJsonData()
         // if the Name OR - Off_reason, search in the list for the device code
         if (strcmp(descriptor, "Off_reason") == 0)
         {
-          for (size_t k = 0; k < sizeof VeDirectDeviceCodeOR / sizeof VeDirectDeviceCodeOR[0]; k++)
+          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeOR) / sizeof(VeDirectDeviceCodeOR[0]); k++)
           {
             if (strcmp(VeDirectDeviceCodeOR[k][0], Vevalue) == 0)
             {
@@ -548,7 +545,7 @@ bool getJsonData()
         // if the Name CS - Operation_state, search in the list for the device code
         if (strcmp(descriptor, "Operation_state") == 0)
         {
-          for (size_t k = 0; k < sizeof VeDirectDeviceCodeCS / sizeof VeDirectDeviceCodeCS[0]; k++)
+          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeCS) / sizeof(VeDirectDeviceCodeCS[0]); k++)
           {
             if (strcmp(VeDirectDeviceCodeCS[k][0], Vevalue) == 0)
             {
@@ -560,7 +557,7 @@ bool getJsonData()
         // if the Name ERR - Current_error, search in the list for the device code
         if (strcmp(descriptor, "Current_error") == 0)
         {
-          for (size_t k = 0; k < sizeof VeDirectDeviceCodeERR / sizeof VeDirectDeviceCodeERR[0]; k++)
+          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeERR) / sizeof(VeDirectDeviceCodeERR[0]); k++)
           {
             if (strcmp(VeDirectDeviceCodeERR[k][0], Vevalue) == 0)
             {
@@ -572,7 +569,7 @@ bool getJsonData()
         // if the Name MPPT - Tracker_operation_mode, search in the list for the device code
         if (strcmp(descriptor, "Tracker_operation_mode") == 0)
         {
-          for (size_t k = 0; k < sizeof VeDirectDeviceCodeMPPT / sizeof VeDirectDeviceCodeMPPT[0]; k++)
+          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeMPPT) / sizeof(VeDirectDeviceCodeMPPT[0]); k++)
           {
             if (strcmp(VeDirectDeviceCodeMPPT[k][0], Vevalue) == 0)
             {
@@ -589,6 +586,7 @@ bool getJsonData()
     // put it all back to the json data
     // Json[descriptor] = Vevalue;
   }
+  
   Serial.println();
   //Json["RAW"] = rawVal;
   return true;

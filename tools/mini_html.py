@@ -35,7 +35,7 @@ try:
    if env.GetProjectOption("build_type") == "debug":
         cpp_output += f.read()  
    else:
-      #cpp_output += f.read()  # disable compressor removes %VARIABLE%
+      #cpp_output += f.read()  # disable compressor
       cpp_output += minify_html.minify(f.read(), minify_js=True)
 
    f.close()

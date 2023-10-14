@@ -58,7 +58,11 @@
     var websocket;
     var dataRows = document.getElementsByClassName("dR");
     var dataFields = document.getElementsByClassName("dF");
-    window.addEventListener('load', onLoad);
+
+$( document ).ready(function() {
+    initWebSocket();
+});
+    //window.addEventListener('load', onLoad);
     function initWebSocket() {
         console.log('Trying to open a WebSocket connection...');
         websocket = new WebSocket(gateway);

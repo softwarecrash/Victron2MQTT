@@ -8,8 +8,8 @@
 
 #define DEBUG_BAUD 115200
 
-#define JSON_BUFFER 4096
-#define MQTT_BUFFER 512
+#define JSON_BUFFER 2048
+//#define MQTT_BUFFER 512
 
 #define FlashSize ESP.getFreeSketchSpace()
 #define ESP01

@@ -1,4 +1,4 @@
-static const char * const VePrettyData[][3]{
+static const char * VePrettyData[][3] PROGMEM {
 // get name, pretify name, value operator
 {"V","Voltage", "1000",}, // display in webUI | Dont edit
 {"V2","Voltage_2", "1000",},
@@ -64,7 +64,7 @@ static const char * const VePrettyData[][3]{
 {"DC_IN_I","DC_input_current","10"},
 {"DC_IN_P","DC_input_power","0"},
 };
-static const char *const haDescriptor[][4]{
+static const char * haDescriptor[][4] PROGMEM {
       // state_topic, icon, unit_ofmeasurement, class
       {"Voltage", "mdi:car-battery", "V", "voltage"},
       {"Voltage_2", "mdi:car-battery", "V", "voltage"},
