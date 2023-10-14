@@ -1,5 +1,5 @@
 // AR (Alarm_code)
-static const char * const VeDirectDeviceCodeAR[][25]{
+static const char * const VeDirectDeviceCodeAR[][2]{
     {"1", "Low Voltage"},
     {"2", "High Voltage"},
     {"4", "Low SOC"},
@@ -16,7 +16,7 @@ static const char * const VeDirectDeviceCodeAR[][25]{
     {"8192", "BMS Lockout"}};
 
 // OR (off_reason)
-static const char * const VeDirectDeviceCodeOR[][36]{
+static const char * const VeDirectDeviceCodeOR[][2]{
     {"0X00000000", "None"},
     {"0X00000001", "No input power"},
     {"0X00000002", "Switched off (power switch)"},
@@ -29,14 +29,14 @@ static const char * const VeDirectDeviceCodeOR[][36]{
     {"0X00000100", "Analysing input voltage"},};
 
 // AP_BLE
-static const char * const VeDirectDeviceCodeAP_BLE[][32]{
+static const char * const VeDirectDeviceCodeAP_BLE[][2]{
     {"0X00000001", "BLE supports switching off"},
     {"0X00000002", "BLE switching off is permanent"},};
 
 
 
 // CS (operation_state)
-static const char * const VeDirectDeviceCodeCS[][28]{
+static const char * const VeDirectDeviceCodeCS[][2]{
     {"0", "Off"},
     {"1", "Low power"},
     {"2", "Fault"},
@@ -54,7 +54,7 @@ static const char * const VeDirectDeviceCodeCS[][28]{
     {"252", "External Control"},};
 
 // ERR (Current_error)
-static const char * const VeDirectDeviceCodeERR[][50]{
+static const char * const VeDirectDeviceCodeERR[][2]{
     {"0", "No error"},
     {"2", "Battery voltage too high"},
     {"17", "Charger temperature too high"},
@@ -77,7 +77,7 @@ static const char * const VeDirectDeviceCodeERR[][50]{
     {"119", "User settings invalid"},};
 
 // MPPT (Tracker_operation_mode)
-static const char * const VeDirectDeviceCodeMPPT[][28]{
+static const char * const VeDirectDeviceCodeMPPT[][2]{
     {"0", "Off"},
     {"1", "Voltage or current limited"},
     {"2", "MPP Tracker active"},};

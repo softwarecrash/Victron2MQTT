@@ -36,6 +36,7 @@ bool restartNow = false;
 bool workerCanRun = true;
 bool dataProzessing = false;
 bool haDiscTrigger = false;
+bool deviceModelSet = false;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
 byte wsReqInvNum = 1;
@@ -113,8 +114,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     wsClient = client;
-    // getJsonData();
-    if (!dataProzessing)
+    if (!dataProzessing && wsClient != nullptr && wsClient->canSend())
       notifyClients();
     DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     break;
@@ -507,15 +507,16 @@ bool getJsonData()
         {
           Json[descriptor] = myve.veValue[i];
         }
-
+        
         // if the Name Device_Model, search in the list for the device code
-        if (strcmp(descriptor, "Device_model") == 0)
+        if (strcmp(descriptor, "Device_model") == 0 && !deviceModelSet)
         {
           for (size_t k = 0; k < sizeof VeDirectDeviceList / sizeof VeDirectDeviceList[0]; k++)
           {
             if (strcmp(VeDirectDeviceList[k][0], Vevalue) == 0)
             {
               Json[descriptor] = VeDirectDeviceList[k][1];
+              deviceModelSet = true;
               break;
             }
           }
@@ -580,6 +581,7 @@ bool getJsonData()
             }
           }
         }
+        
         break; // if we have found and prozessed the data, break the loop
       }
     }
@@ -588,7 +590,7 @@ bool getJsonData()
     // Json[descriptor] = Vevalue;
   }
   Serial.println();
-  Json["RAW"] = rawVal;
+  //Json["RAW"] = rawVal;
   return true;
 }
 
