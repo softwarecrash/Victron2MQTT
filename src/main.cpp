@@ -483,7 +483,7 @@ bool getJsonData()
     Vevalue = myve.veValue[i];
 
     // search for every Vevalue in the list and replace it with clear name
-    for (size_t j = 0; j < sizeof VePrettyData / sizeof VePrettyData[0]; j++)
+    for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
     {
       if (strcmp(VePrettyData[j][0], myve.veName[i]) == 0) // search the real descriptor in the array
       {
