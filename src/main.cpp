@@ -465,7 +465,6 @@ void prozessData()
 bool getJsonData()
 {
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
-
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
 
   // jsonESP["Flash_Size"] = ESP.getFlashChipSize();
