@@ -60,7 +60,7 @@ VeDirectFrameHandler::VeDirectFrameHandler() : // mStop(false),	// don't know wh
  */
 void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
-	 Serial.write(inbyte);
+	// Serial.write(inbyte);
 	// if (mStop) return;
 	if ((inbyte == ':') && (mState != CHECKSUM))
 	{

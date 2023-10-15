@@ -110,11 +110,14 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     wsClient = client;
+    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     if (!dataProzessing /*&& wsClient != nullptr && wsClient->canSend()*/)
       notifyClients();
-    DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    
     break;
   case WS_EVT_DISCONNECT:
+    Serial.printf("WebSocket client #%u disconnected\n", client->id());
     DEBUG_WEBF("WebSocket client #%u disconnected\n", client->id());
     wsClient = nullptr;
     break;
@@ -460,7 +463,7 @@ void prozessData()
   notifyClients();
   dataProzessing = false;
 
-  Serial.println(ESP.getFreeHeap());
+  //Serial.println(ESP.getFreeHeap());
 
   //float error = 1/0;
   //Serial.println(error);
@@ -479,8 +482,8 @@ bool getJsonData()
   jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
   // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
-  Serial.println();
-  Serial.println("VE recived data: ");
+  //Serial.println();
+  //Serial.println("VE recived data: ");
   // Serial.println(myve.veEnd);
   // const char *descriptor;
   // const char *Vevalue;
@@ -502,13 +505,13 @@ bool getJsonData()
     rawVal += "\":\"";
     rawVal += myve.veValue[i];
     rawVal += "\"},";
-
+/*
     Serial.print("[");
     Serial.print(myve.veName[i]);
     Serial.print(":");
     Serial.print(myve.veValue[i]);
     Serial.print("]");
-
+*/
     // search for every Vevalue in the list and replace it with clear name
     for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
     {
@@ -606,7 +609,7 @@ bool getJsonData()
     }
   }
 
-  Serial.println();
+  //Serial.println();
   // Json["RAW"] = rawVal;
   return true;
 }
