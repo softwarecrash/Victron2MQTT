@@ -32,17 +32,14 @@ String topic = ""; // Default first part of topic. We will add device ID in setu
 // flag for saving data and other things
 bool shouldSaveConfig = false;
 bool restartNow = false;
-// bool updateProgress = false;
 bool workerCanRun = true;
 bool dataProzessing = false;
 bool haDiscTrigger = false;
-bool deviceModelSet = false;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
 byte wsReqInvNum = 1;
 char mqtt_server[80];
 char mqttClientId[80];
-// int errorcode;
 uint32_t bootcount = 0;
 
 WiFiClient client;
@@ -55,10 +52,9 @@ DNSServer dns;
 VeDirectFrameHandler myve;
 SoftwareSerial veSerial;
 
-// UnixTime uTime(3);
 DynamicJsonDocument Json(JSON_BUFFER);
+// StaticJsonDocument <JSON_BUFFER>Json;
 JsonObject jsonESP = Json.createNestedObject("ESP_Data");
-// JsonObject statsData = liveJson.createNestedObject("StatsData");
 #include "status-LED.h"
 ADC_MODE(ADC_VCC);
 //----------------------------------------------------------------------
@@ -170,28 +166,30 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
- // while (veSerial.available())
-  //{
-  //  myve.rxData(veSerial.read());
-  //  esp_yield();
- // }
-   if (veSerial.available())
+   while (veSerial.available())
   {
     myve.rxData(veSerial.read());
- }
+    esp_yield();
+   }
+  //if (veSerial.available())
+  //{
+  //  myve.rxData(veSerial.read());
+ // }
 }
 
 void setup()
 {
   pinMode(LED_PIN, OUTPUT);
   analogWrite(LED_PIN, 0);
+  digitalWrite(MYPORT_TX, 0);
   resetCounter(true);
   _settings.load();
   WiFi.persistent(true); // fix wifi save bug
   // AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
-  veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX, MYPORT_TX, false);
+  veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX /*, MYPORT_TX, false*/);
   veSerial.flush();
+  veSerial.enableRxGPIOPullUp(false);
   myve.callback(prozessData);
 
   Serial.begin(DEBUG_BAUD);
@@ -260,6 +258,27 @@ void setup()
               {
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_MAIN, htmlProcessor);
       request->send(response); });
+
+    /*
+              server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request)
+                  {
+    size_t max = (ESP.getFreeHeap() / 3) & 0xFFE0;
+    AsyncWebServerResponse *response = request->beginChunkedResponse("text/html", [max](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+
+                    // Get the chunk based on the index and maxLen
+                    size_t len = HTML_MAIN_LEN - index;
+                    if (len > maxLen) len = maxLen;
+                    if (len > max) len = max;
+                    if (len > 0) memcpy_P(buffer, HTML_MAIN + index, len);
+
+
+                    // Return the actual length of the chunk (0 for end of file)
+                    return len;
+
+                }, htmlProcessor);
+                request->send(response);
+                  });
+    */
 
     server.on("/livejson", HTTP_GET, [](AsyncWebServerRequest *request)
               {
@@ -386,8 +405,8 @@ void setup()
     MDNS.addService("http", "tcp", 80);
     MDNS.update();
 
-  jsonESP["IP"] = WiFi.localIP();
-  jsonESP["sw_version"] = SOFTWARE_VERSION;
+    jsonESP["IP"] = WiFi.localIP();
+    jsonESP["sw_version"] = SOFTWARE_VERSION;
   }
   analogWrite(LED_PIN, 255);
   resetCounter(false);
@@ -439,6 +458,8 @@ void prozessData()
   getJsonData();
   notifyClients();
   dataProzessing = false;
+
+  Serial.println(ESP.getFreeHeap());
 }
 
 bool getJsonData()
@@ -449,19 +470,20 @@ bool getJsonData()
 
   // jsonESP["Flash_Size"] = ESP.getFlashChipSize();
   // jsonESP["Sketch_Size"] = ESP.getSketchSize();
-   jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+  jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
   // jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
-   jsonESP["Free_Heap"] = ESP.getFreeHeap();
-   jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  jsonESP["Free_Heap"] = ESP.getFreeHeap();
+  jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
   // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
+  Serial.println();
   Serial.println("VE recived data: ");
-  Serial.println(myve.veEnd);
-  const char *descriptor;
-  const char *Vevalue;
+  // Serial.println(myve.veEnd);
+  // const char *descriptor;
+  // const char *Vevalue;
 
   String rawVal;
-  
+
   for (int i = 0; i < myve.veEnd; i++)
   {
 
@@ -477,117 +499,105 @@ bool getJsonData()
     Serial.print(myve.veValue[i]);
     Serial.print("]");
 
-    // in case we found nothing later, fill the data holer
-    descriptor = myve.veName[i];
-    Vevalue = myve.veValue[i];
-
     // search for every Vevalue in the list and replace it with clear name
     for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
     {
       if (strcmp(VePrettyData[j][0], myve.veName[i]) == 0) // search the real descriptor in the array
       {
-        descriptor = VePrettyData[j][1];
-
         // check if we have a data operator
         if (strlen(VePrettyData[j][2]) > 0 && strcmp(VePrettyData[j][2], "0") != 0)
         {
-          Json[descriptor] = (int)((atof(myve.veValue[i]) / atoi(VePrettyData[j][2])) * 100 + 0.5) / 100.0;
+          Json[FPSTR(VePrettyData[j][1])] = (int)((atof(myve.veValue[i]) / atoi(VePrettyData[j][2])) * 100 + 0.5) / 100.0;
         }
         else if (strcmp(VePrettyData[j][2], "0") == 0)
         {
-          Json[descriptor] = atoi(myve.veValue[i]);
+          Json[FPSTR(VePrettyData[j][1])] = atoi(myve.veValue[i]);
         }
         else
         {
-          Json[descriptor] = myve.veValue[i];
+          Json[FPSTR(VePrettyData[j][1])] = myve.veValue[i];
         }
-        
+/*
         // if the Name Device_Model, search in the list for the device code
-        if (strcmp(descriptor, "Device_model") == 0)
+        if (strcmp(VePrettyData[j][1], "Device_model") == 0)
         {
-          Serial.println("device type section found");
           for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(**VeDirectDeviceList[0]); k++)
           {
-            if (strcmp(VeDirectDeviceList[k][0], Vevalue) == 0)
+            if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
             {
-              Serial.println(VeDirectDeviceList[k][1]);
-              Json[descriptor] = VeDirectDeviceList[k][1];
-              deviceModelSet = true;
+              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceList[k][1]);
               break;
             }
           }
         }
+*/
         // if the Name AR - Alarm_code, search in the list for the device code
-        if (strcmp(descriptor, "Alarm_code") == 0)
+        if (strcmp(VePrettyData[j][1], "Alarm_code") == 0)
         {
           for (size_t k = 0; k < sizeof(VeDirectDeviceCodeAR) / sizeof(VeDirectDeviceCodeAR[0]); k++)
           {
-            if (strcmp(VeDirectDeviceCodeAR[k][0], Vevalue) == 0)
+            if (strcmp(VeDirectDeviceCodeAR[k][0], myve.veValue[i]) == 0)
             {
-              Json[descriptor] = VeDirectDeviceCodeAR[k][1];
+              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeAR[k][1]);
               break;
             }
           }
         }
         // if the Name OR - Off_reason, search in the list for the device code
-        if (strcmp(descriptor, "Off_reason") == 0)
+        if (strcmp(VePrettyData[j][1], "Off_reason") == 0)
         {
           for (size_t k = 0; k < sizeof(VeDirectDeviceCodeOR) / sizeof(VeDirectDeviceCodeOR[0]); k++)
           {
-            if (strcmp(VeDirectDeviceCodeOR[k][0], Vevalue) == 0)
+            if (strcmp(VeDirectDeviceCodeOR[k][0], myve.veValue[i]) == 0)
             {
-              Json[descriptor] = VeDirectDeviceCodeOR[k][1];
+              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeOR[k][1]);
               break;
             }
           }
         }
         // if the Name CS - Operation_state, search in the list for the device code
-        if (strcmp(descriptor, "Operation_state") == 0)
+        if (strcmp(VePrettyData[j][1], "Operation_state") == 0)
         {
           for (size_t k = 0; k < sizeof(VeDirectDeviceCodeCS) / sizeof(VeDirectDeviceCodeCS[0]); k++)
           {
-            if (strcmp(VeDirectDeviceCodeCS[k][0], Vevalue) == 0)
+            if (strcmp(VeDirectDeviceCodeCS[k][0], myve.veValue[i]) == 0)
             {
-              Json[descriptor] = VeDirectDeviceCodeCS[k][1];
+              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeCS[k][1]);
               break;
             }
           }
         }
         // if the Name ERR - Current_error, search in the list for the device code
-        if (strcmp(descriptor, "Current_error") == 0)
+        if (strcmp(VePrettyData[j][1], "Current_error") == 0)
         {
           for (size_t k = 0; k < sizeof(VeDirectDeviceCodeERR) / sizeof(VeDirectDeviceCodeERR[0]); k++)
           {
-            if (strcmp(VeDirectDeviceCodeERR[k][0], Vevalue) == 0)
+            if (strcmp(VeDirectDeviceCodeERR[k][0], myve.veValue[i]) == 0)
             {
-              Json[descriptor] = VeDirectDeviceCodeERR[k][1];
+              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeERR[k][1]);
               break;
             }
           }
         }
         // if the Name MPPT - Tracker_operation_mode, search in the list for the device code
-        if (strcmp(descriptor, "Tracker_operation_mode") == 0)
+        if (strcmp(VePrettyData[j][1], "Tracker_operation_mode") == 0)
         {
           for (size_t k = 0; k < sizeof(VeDirectDeviceCodeMPPT) / sizeof(VeDirectDeviceCodeMPPT[0]); k++)
           {
-            if (strcmp(VeDirectDeviceCodeMPPT[k][0], Vevalue) == 0)
+            if (strcmp(VeDirectDeviceCodeMPPT[k][0], myve.veValue[i]) == 0)
             {
-              Json[descriptor] = VeDirectDeviceCodeMPPT[k][1];
+              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeMPPT[k][1]);
               break;
             }
           }
         }
-        
         break; // if we have found and prozessed the data, break the loop
       }
     }
-
-    // put it all back to the json data
-    // Json[descriptor] = Vevalue;
   }
-  
+
   Serial.println();
-  //Json["RAW"] = rawVal;
+  // Json["RAW"] = rawVal;
   return true;
 }
 
