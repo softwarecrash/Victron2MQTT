@@ -33,16 +33,10 @@ try:
    cpp_output += "static const char "+Path(x).stem+"[] PROGMEM = R\"rawliteral("
    f = open(x, "r")
    if env.GetProjectOption("build_type") == "debug":
-        cpp_output += f.read()  
+        content = f.read()  
    else:
-     #content = f.read()  # disable compressor
-      content = minify_html.minify(f.read(), minify_js=True)
-
-      cpp_output += content
-      #cpp_output += f.read()  # disable compressor
-
-      #cpp_output += minify_html.minify(f.read(), minify_js=True)
-
+        content = minify_html.minify(f.read(), minify_js=True)
+   cpp_output += content
    f.close()
    cpp_output += ")rawliteral\";\n"
    cpp_output += "#define " +Path(x).stem+ "_LEN " + str(len(content)) +"\n"

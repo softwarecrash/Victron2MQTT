@@ -425,14 +425,15 @@ void loop()
     // Make sure wifi is in the right mode
     if (WiFi.status() == WL_CONNECTED)
     { // No use going to next step unless WIFI is up and running.
+          ws.cleanupClients(); // clean unused client connections
+      MDNS.update();
       if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
       {
         DEBUG_WEBLN("<MQTT> Data Send...");
         sendtoMQTT(); // Update data to MQTT server if we should
         mqtttimer = millis();
       }
-      ws.cleanupClients(); // clean unused client connections
-      MDNS.update();
+
       mqttclient.loop(); // Check if we have something to read from MQTT
     }
     notificationLED(); // notification LED routine
@@ -460,6 +461,9 @@ void prozessData()
   dataProzessing = false;
 
   Serial.println(ESP.getFreeHeap());
+
+  //float error = 1/0;
+  //Serial.println(error);
 }
 
 bool getJsonData()
@@ -485,6 +489,13 @@ bool getJsonData()
 
   for (int i = 0; i < myve.veEnd; i++)
   {
+
+    if(myve.veName[i] == NULL || strlen(myve.veName[i]) == 0 || myve.veValue[i] == NULL || strlen(myve.veValue[i]) == 0)
+    {
+      i = myve.veEnd;
+      break;
+    }
+
 
     rawVal += "{\"";
     rawVal += myve.veName[i];
