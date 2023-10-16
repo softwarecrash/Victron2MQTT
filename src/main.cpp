@@ -114,15 +114,16 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     if (!dataProzessing /*&& wsClient != nullptr && wsClient->canSend()*/)
       notifyClients();
-    
+
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());
     DEBUG_WEBF("WebSocket client #%u disconnected\n", client->id());
     wsClient = nullptr;
+    ws.cleanupClients();
     break;
   case WS_EVT_DATA:
-    // handleWebSocketMessge(arg, data, len);
+    handleWebSocketMessage(arg, data, len);
     break;
   case WS_EVT_PONG:
   case WS_EVT_ERROR:
@@ -169,15 +170,15 @@ bool resetCounter(bool count)
 
 void ReadVEData()
 {
-   while (veSerial.available())
+  while (veSerial.available())
   {
     myve.rxData(veSerial.read());
     esp_yield();
-   }
-  //if (veSerial.available())
+  }
+  // if (veSerial.available())
   //{
-  //  myve.rxData(veSerial.read());
- // }
+  //   myve.rxData(veSerial.read());
+  // }
 }
 
 void setup()
@@ -427,8 +428,8 @@ void loop()
 
     // Make sure wifi is in the right mode
     if (WiFi.status() == WL_CONNECTED)
-    { // No use going to next step unless WIFI is up and running.
-          ws.cleanupClients(); // clean unused client connections
+    {                      // No use going to next step unless WIFI is up and running.
+      ws.cleanupClients(); // clean unused client connections
       MDNS.update();
       if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
       {
@@ -463,10 +464,10 @@ void prozessData()
   notifyClients();
   dataProzessing = false;
 
-  //Serial.println(ESP.getFreeHeap());
+  // Serial.println(ESP.getFreeHeap());
 
-  //float error = 1/0;
-  //Serial.println(error);
+  // float error = 1/0;
+  // Serial.println(error);
 }
 
 bool getJsonData()
@@ -480,38 +481,38 @@ bool getJsonData()
   // jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
   jsonESP["Free_Heap"] = ESP.getFreeHeap();
   jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  //jsonESP["WS_Clients"] = ws.getClients();
   // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
-  //Serial.println();
-  //Serial.println("VE recived data: ");
-  // Serial.println(myve.veEnd);
-  // const char *descriptor;
-  // const char *Vevalue;
+  // Serial.println();
+  // Serial.println("VE recived data: ");
+  //  Serial.println(myve.veEnd);
+  //  const char *descriptor;
+  //  const char *Vevalue;
 
   String rawVal;
 
   for (int i = 0; i < myve.veEnd; i++)
   {
 
-    if(myve.veName[i] == NULL || strlen(myve.veName[i]) == 0 || myve.veValue[i] == NULL || strlen(myve.veValue[i]) == 0)
+    if (myve.veName[i] == NULL || strlen(myve.veName[i]) == 0 || myve.veValue[i] == NULL || strlen(myve.veValue[i]) == 0)
     {
       i = myve.veEnd;
       break;
     }
-
 
     rawVal += "{\"";
     rawVal += myve.veName[i];
     rawVal += "\":\"";
     rawVal += myve.veValue[i];
     rawVal += "\"},";
-/*
-    Serial.print("[");
-    Serial.print(myve.veName[i]);
-    Serial.print(":");
-    Serial.print(myve.veValue[i]);
-    Serial.print("]");
-*/
+    /*
+        Serial.print("[");
+        Serial.print(myve.veName[i]);
+        Serial.print(":");
+        Serial.print(myve.veValue[i]);
+        Serial.print("]");
+    */
     // search for every Vevalue in the list and replace it with clear name
     for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
     {
@@ -530,20 +531,20 @@ bool getJsonData()
         {
           Json[FPSTR(VePrettyData[j][1])] = myve.veValue[i];
         }
-/*
-        // if the Name Device_Model, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Device_model") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(**VeDirectDeviceList[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceList[k][1]);
-              break;
-            }
-          }
-        }
-*/
+        
+                // if the Name Device_Model, search in the list for the device code
+                if (strcmp(VePrettyData[j][1], "Device_model") == 0)
+                {
+                  for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(**VeDirectDeviceList[0]); k++)
+                  {
+                    if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
+                    {
+                      Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceList[k][1]);
+                      break;
+                    }
+                  }
+                }
+        
         // if the Name AR - Alarm_code, search in the list for the device code
         if (strcmp(VePrettyData[j][1], "Alarm_code") == 0)
         {
@@ -609,8 +610,8 @@ bool getJsonData()
     }
   }
 
-  //Serial.println();
-  // Json["RAW"] = rawVal;
+  // Serial.println();
+  //  Json["RAW"] = rawVal;
   return true;
 }
 
