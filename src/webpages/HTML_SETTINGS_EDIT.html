@@ -57,6 +57,16 @@
                 id="mqttjson" name="post_webuicolormode" value="true" %pre_webuidarkmode%>
         </div>
     </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="httpUserdesc">HTTP Username</span>
+        <input type="text" class="form-control" aria-describedby="httpUserdesc" id="httpUser" name="post_httpUser" maxlength="40"
+            maxlength="35" value="%pre_http_user%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="httpPassdesc">HTTP Password</span>
+        <input type="password" class="form-control" aria-describedby="httpPassdesc" id="httpPass" name="post_httpPass" maxlength="40"
+            maxlength="35" value="%pre_http_pass%">
+    </div>
 
     <div class="d-grid gap-2">
         <input class="btn btn-primary" type="submit" value="Save settings">

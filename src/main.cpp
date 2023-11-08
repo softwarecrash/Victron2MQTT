@@ -344,6 +344,8 @@ void setup()
                 _settings.data.mqttJson = (request->arg("post_mqttjson") == "true") ? true : false;
                 strncpy(_settings.data.mqttTriggerPath, request->arg("post_mqtttrigger").c_str(), 80);
                 _settings.data.webUIdarkmode = (request->arg("post_webuicolormode") == "true") ? true : false;
+                strncpy(_settings.data.httpUser, request->arg("post_httpUser").c_str(), 40);
+                strncpy(_settings.data.httpPass, request->arg("post_httpPass").c_str(), 40);
                 _settings.save();
                 request->redirect("/reboot"); });
 
