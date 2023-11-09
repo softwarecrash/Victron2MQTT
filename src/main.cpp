@@ -717,7 +717,7 @@ bool sendHaDiscovery()
     {
       sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
 
-      mqttContentLength = sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s\",\"icon\": \"%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\",\"device\":{\"identifiers\":[\"%s\"], \"configuration_url\":\"http://%s\",\"name\":\"%s\", \"model\":\"%s\",\"manufacturer\":\"SoftWareCrash\",\"sw_version\":\"Victron2MQTT %s\"}}",
+      mqttContentLength = sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s\",\"icon\": \"mdi:%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\",\"device\":{\"identifiers\":[\"%s\"], \"configuration_url\":\"http://%s\",\"name\":\"%s\", \"model\":\"%s\",\"manufacturer\":\"SoftWareCrash\",\"sw_version\":\"Victron2MQTT %s\"}}",
                                   _settings.data.mqttTopic, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2], haDescriptor[i][3], Json["Serial_number"].as<String>().c_str(), jsonESP["IP"].as<String>().c_str(), _settings.data.deviceName, Json["Model_description"].as<String>().c_str(), SOFTWARE_VERSION);
 
       mqttclient.beginPublish(topBuff, mqttContentLength, true);
