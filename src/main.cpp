@@ -35,6 +35,8 @@ bool restartNow = false;
 bool workerCanRun = true;
 bool dataProzessing = false;
 bool haDiscTrigger = false;
+bool haAutoDiscTrigger = false;
+unsigned int jsonSize = 0;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
 byte wsReqInvNum = 1;
@@ -188,6 +190,7 @@ void setup()
   digitalWrite(MYPORT_TX, 0);
   resetCounter(true);
   _settings.load();
+  haAutoDiscTrigger = _settings.data.haDiscovery;
   WiFi.persistent(true); // fix wifi save bug
   // AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
@@ -346,6 +349,7 @@ void setup()
                 _settings.data.webUIdarkmode = (request->arg("post_webuicolormode") == "true") ? true : false;
                 strncpy(_settings.data.httpUser, request->arg("post_httpUser").c_str(), 40);
                 strncpy(_settings.data.httpPass, request->arg("post_httpPass").c_str(), 40);
+                _settings.data.haDiscovery = (request->arg("post_hadiscovery") == "true") ? true : false;
                 _settings.save();
                 request->redirect("/reboot"); });
 
@@ -444,11 +448,15 @@ void loop()
     }
     notificationLED(); // notification LED routine
 
-    if (haDiscTrigger)
-    {
-      sendHaDiscovery();
-      haDiscTrigger = false;
-    }
+      //if ((haDiscTrigger || haAutoDiscTrigger) && measureJson(Json) > jsonSize)
+      if ((haDiscTrigger || _settings.data.haDiscovery) && measureJson(Json) > jsonSize)
+      {
+        if(sendHaDiscovery()){
+        haDiscTrigger = false;
+        //haAutoDiscTrigger = false;
+        jsonSize = measureJson(Json);
+        }
+      }
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))
@@ -708,13 +716,48 @@ bool sendHaDiscovery()
   {
     return false;
   }
+  String haDeviceDescription = String("\"dev\":") +
+                               "{\"ids\":[\"" + mqttClientId + "\"]," +
+                               "\"name\":\"" + _settings.data.deviceName + "\"," +
+                               "\"cu\":\"http://" + WiFi.localIP().toString() + "\"," +
+                               "\"mdl\":\"" + Json["Model_description"].as<String>().c_str() + "\"," +
+                               "\"mf\":\"SoftWareCrash\"," +
+                               "\"sw\":\"" + SOFTWARE_VERSION + "\"" +
+                               "}";
+
   char topBuff[128];
-  char configBuff[1024];
-  size_t mqttContentLength;
+  //char configBuff[1024];
+  //size_t mqttContentLength;
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
     if (Json.containsKey(haDescriptor[i][0]))
     {
+    String haPayLoad = String("{") +
+                       "\"name\":\"" + haDescriptor[i][0] + "\"," +
+                       "\"stat_t\":\"" + _settings.data.mqttTopic + "/" + haDescriptor[i][0] + "\"," +
+                       "\"uniq_id\":\"" + mqttClientId + "." + haDescriptor[i][0] + "\"," +
+                       "\"ic\":\"mdi:" + haDescriptor[i][1] + "\",";
+    if (strlen(haDescriptor[i][2]) != 0)
+      haPayLoad += (String) "\"unit_of_meas\":\"" + haDescriptor[i][2] + "\",";
+    if (strlen(haDescriptor[i][3]) != 0)
+      haPayLoad += (String) "\"dev_cla\":\"" + haDescriptor[i][3] + "\",";
+    haPayLoad += haDeviceDescription;
+    haPayLoad += "}";
+    sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
+    mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
+    for (size_t i = 0; i < haPayLoad.length(); i++)
+    {
+      mqttclient.write(haPayLoad[i]);
+    }
+    mqttclient.endPublish();
+
+
+
+
+
+
+/*
+
       sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
 
       mqttContentLength = sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s\",\"icon\": \"mdi:%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\",\"device\":{\"identifiers\":[\"%s\"], \"configuration_url\":\"http://%s\",\"name\":\"%s\", \"model\":\"%s\",\"manufacturer\":\"SoftWareCrash\",\"sw_version\":\"Victron2MQTT %s\"}}",
@@ -726,6 +769,7 @@ bool sendHaDiscovery()
         mqttclient.write(configBuff[i]);
       }
       mqttclient.endPublish();
+      */
     }
   }
   return true;

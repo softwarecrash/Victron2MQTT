@@ -27,6 +27,7 @@ public:
     bool webUIdarkmode;       // flag for dark mode
     char httpUser[40];        // http basic auth username
     char httpPass[40];        // http basic auth password
+    bool haDiscovery;         // HomeAssistant Discovery switch
   } data;
 
   void load()
@@ -108,6 +109,10 @@ private:
     {
       strcpy(data.httpPass, "");
     }
+    if (data.haDiscovery && !data.haDiscovery)
+    {
+      data.haDiscovery = false;
+    }
   }
   void coVersCheck()
   {
@@ -126,6 +131,7 @@ private:
       data.webUIdarkmode = false;
       strcpy(data.httpUser, "");
       strcpy(data.httpPass, "");
+      data.haDiscovery = false;
       save();
       load();
     }

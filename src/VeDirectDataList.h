@@ -71,7 +71,7 @@ static const char * haDescriptor[][4] PROGMEM {
       {"Voltage_3", "car-battery", "V", "voltage"},
       {"Starter_voltage", "flash-triangle-outline", "V", "voltage"},
       {"Mid_voltage", "battery-outline", "V", "voltage"},
-      {"Mid_deviation", "", "%", ""},
+      {"Mid_deviation", "eye", "%", "percent"},
       {"Panel_voltage", "solar-panel", "V", "voltage"},
       {"Panel_power","solar-power","W","power"},
       {"Battery_current", "current-dc", "A", "current"},
