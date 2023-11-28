@@ -448,12 +448,10 @@ void loop()
     }
     notificationLED(); // notification LED routine
 
-      //if ((haDiscTrigger || haAutoDiscTrigger) && measureJson(Json) > jsonSize)
       if ((haDiscTrigger || _settings.data.haDiscovery) && measureJson(Json) > jsonSize)
       {
         if(sendHaDiscovery()){
         haDiscTrigger = false;
-        //haAutoDiscTrigger = false;
         jsonSize = measureJson(Json);
         }
       }
