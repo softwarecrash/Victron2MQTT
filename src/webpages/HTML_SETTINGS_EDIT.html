@@ -53,8 +53,8 @@
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqtthadisc">HA Discovery</span>
         <div class="form-switch form-control mqtt-settings-switch" style="width:50%%; text-align: center;">
-            <input type="checkbox" class="form-check-input form control" aria-describedby="mqtthadisc"
-                role="switch" id="post_hadiscovery" name="post_hadiscovery" value="true" %pre_hadiscovery%>
+            <input type="checkbox" class="form-check-input form control" aria-describedby="mqtthadisc" role="switch"
+                id="post_hadiscovery" name="post_hadiscovery" value="true" %pre_hadiscovery% onclick='haSwitch()'>
         </div>
     </div>
     <div class="input-group mb-2">
@@ -80,5 +80,14 @@
 </form>
 <a class="btn btn-primary" href="/settings" role="button">Back</a>
 </div>
+
+<script type='text/javascript'>
+    function haSwitch() {
+        document.getElementById('mqttjson').checked = false;
+        document.getElementById('mqttjson').disabled = document.getElementById('post_hadiscovery').checked;
+        document.getElementById('mqttjson').enabled = !(document.getElementById('post_hadiscovery').checked);
+    }
+</script>
+
 %pre_foot_template%
 <p hidden>Hidden Helper</p>
