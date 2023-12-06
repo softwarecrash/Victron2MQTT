@@ -437,7 +437,7 @@ void loop()
     {                      // No use going to next step unless WIFI is up and running.
       ws.cleanupClients(); // clean unused client connections
       MDNS.update();
-      if (millis() > (mqtttimer + (_settings.data.mqttRefresh * 1000)))
+      if (millis() - mqtttimer > (_settings.data.mqttRefresh * 1000))
       {
         DEBUG_WEBLN("<MQTT> Data Send...");
         sendtoMQTT(); // Update data to MQTT server if we should
