@@ -16,7 +16,7 @@ static const char * VePrettyData[][3] PROGMEM {
 {"T","Battery_temperature","0"}, // display in webUI | Dont edit
 {"P","Instantaneous_power","0"},
 {"CE","Consumed_Amp_Hours","1000"},
-{"SOC", "SOC", "1000"}, // display in webUI | Dont edit
+{"SOC", "SOC", "10"}, // display in webUI | Dont edit
 {"TTG","Time_to_go","0"},
 {"ALARM","Alarm",""},
 {"RELAY","Relay",""}, // display in webUI | Dont edit
