@@ -81,7 +81,10 @@
 <a class="btn btn-primary" href="/settings" role="button">Back</a>
 </div>
 
-<script type='text/javascript'>
+<script>
+        $(document).ready(function (load) {
+        haSwitch();
+    });
     function haSwitch() {
         document.getElementById('mqttjson').checked = false;
         document.getElementById('mqttjson').disabled = document.getElementById('post_hadiscovery').checked;
