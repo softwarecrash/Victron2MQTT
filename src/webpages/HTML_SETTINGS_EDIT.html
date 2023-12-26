@@ -86,15 +86,11 @@
         haSwitch();
     });
     function haSwitch() {
-        if (document.getElementById('post_hadiscovery').checked)
-        {
+        if (document.getElementById('post_hadiscovery').checked) {
             document.getElementById('mqttjson').checked = false;
-            document.getElementById('mqttjson').disabled = document.getElementById('post_hadiscovery').checked;
-            document.getElementById('mqttjson').enabled = !(document.getElementById('post_hadiscovery').checked);
-        } else {
-            document.getElementById('mqttjson').disabled = document.getElementById('post_hadiscovery').checked;
-            document.getElementById('mqttjson').enabled = !(document.getElementById('post_hadiscovery').checked);
+            document.getElementById('mqttjson').disabled = true;
         }
+        document.getElementById('mqttjson').disabled = document.getElementById('post_hadiscovery').checked;
     }
 </script>
 
