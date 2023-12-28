@@ -485,10 +485,10 @@ bool getJsonData()
 
   // jsonESP["Flash_Size"] = ESP.getFlashChipSize();
   // jsonESP["Sketch_Size"] = ESP.getSketchSize();
-  jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+  //jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
   // jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
-  jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  //jsonESP["Free_Heap"] = ESP.getFreeHeap();
+  //jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
   //jsonESP["WS_Clients"] = ws.getClients();
   // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
@@ -631,7 +631,7 @@ bool connectMQTT()
     {
       mqttclient.publish((topic + String("/IP")).c_str(), String(WiFi.localIP().toString()).c_str());
       mqttclient.publish((topic + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
-      mqttclient.publish((topic + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
+      //mqttclient.publish((topic + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
 
       if (strlen(_settings.data.mqttTriggerPath) > 0)
       {
