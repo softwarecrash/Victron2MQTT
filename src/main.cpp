@@ -263,38 +263,20 @@ void setup()
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+      if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_MAIN, htmlProcessor);
       request->send(response); });
 
-    /*
-              server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request)
-                  {
-    size_t max = (ESP.getFreeHeap() / 3) & 0xFFE0;
-    AsyncWebServerResponse *response = request->beginChunkedResponse("text/html", [max](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-
-                    // Get the chunk based on the index and maxLen
-                    size_t len = HTML_MAIN_LEN - index;
-                    if (len > maxLen) len = maxLen;
-                    if (len > max) len = max;
-                    if (len > 0) memcpy_P(buffer, HTML_MAIN + index, len);
-
-
-                    // Return the actual length of the chunk (0 for end of file)
-                    return len;
-
-                }, htmlProcessor);
-                request->send(response);
-                  });
-    */
-
     server.on("/livejson", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+                if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
                 AsyncResponseStream *response = request->beginResponseStream("application/json");
                 serializeJson(Json, *response);
                 request->send(response); });
 
     server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+                if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
                 AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_REBOOT, htmlProcessor);
                 request->send(response);
                 restartNow = true;
@@ -302,11 +284,13 @@ void setup()
 
     server.on("/confirmreset", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+      if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_CONFIRM_RESET, htmlProcessor);
       request->send(response); });
 
     server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+                if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
                 AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Device is Erasing...");
                 response->addHeader("Refresh", "15; url=/");
                 response->addHeader("Connection", "close");
@@ -318,6 +302,7 @@ void setup()
 
     server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+      if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
       AsyncWebParameter *p = request->getParam(0);
       if (p->name() == "ha")
       {
@@ -327,16 +312,19 @@ void setup()
 
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+      if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_SETTINGS, htmlProcessor);
       request->send(response); });
 
     server.on("/settingsedit", HTTP_GET, [](AsyncWebServerRequest *request)
               {
+      if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_SETTINGS_EDIT, htmlProcessor);
       request->send(response); });
 
     server.on("/settingssave", HTTP_POST, [](AsyncWebServerRequest *request)
               {
+                if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
                 strncpy(_settings.data.mqttServer, request->arg("post_mqttServer").c_str(), 40);
                 _settings.data.mqttPort = request->arg("post_mqttPort").toInt();
                 strncpy(_settings.data.mqttUser, request->arg("post_mqttUser").c_str(), 40);
@@ -359,6 +347,7 @@ void setup()
     //https://gist.github.com/JMishou/60cb762047b735685e8a09cd2eb42a60
     // the request handler is triggered after the upload has finished... 
     // create the response, add header, and send response
+    if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", (Update.hasError())?"FAIL":"OK");
     response->addHeader("Connection", "close");
     response->addHeader("Access-Control-Allow-Origin", "*");
