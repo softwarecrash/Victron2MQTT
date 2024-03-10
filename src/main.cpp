@@ -437,13 +437,14 @@ void loop()
     }
     notificationLED(); // notification LED routine
 
-      if ((haDiscTrigger || _settings.data.haDiscovery) && measureJson(Json) > jsonSize)
+    if ((haDiscTrigger || _settings.data.haDiscovery) && measureJson(Json) > jsonSize)
+    {
+      if (sendHaDiscovery())
       {
-        if(sendHaDiscovery()){
         haDiscTrigger = false;
         jsonSize = measureJson(Json);
-        }
       }
+    }
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))
@@ -474,11 +475,11 @@ bool getJsonData()
 
   // jsonESP["Flash_Size"] = ESP.getFlashChipSize();
   // jsonESP["Sketch_Size"] = ESP.getSketchSize();
-  //jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+  // jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
   // jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
-  //jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  //jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
-  //jsonESP["WS_Clients"] = ws.getClients();
+  // jsonESP["Free_Heap"] = ESP.getFreeHeap();
+  // jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  // jsonESP["WS_Clients"] = ws.getClients();
   // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
   // Serial.println();
@@ -528,20 +529,20 @@ bool getJsonData()
         {
           Json[FPSTR(VePrettyData[j][1])] = myve.veValue[i];
         }
-        
-                // if the Name Device_Model, search in the list for the device code
-                if (strcmp(VePrettyData[j][1], "Device_model") == 0)
-                {
-                  for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(**VeDirectDeviceList[0]); k++)
-                  {
-                    if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
-                    {
-                      Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceList[k][1]);
-                      break;
-                    }
-                  }
-                }
-        
+
+        // if the Name Device_Model, search in the list for the device code
+        if (strcmp(VePrettyData[j][1], "Device_model") == 0)
+        {
+          for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(**VeDirectDeviceList[0]); k++)
+          {
+            if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
+            {
+              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceList[k][1]);
+              break;
+            }
+          }
+        }
+
         // if the Name AR - Alarm_code, search in the list for the device code
         if (strcmp(VePrettyData[j][1], "Alarm_code") == 0)
         {
@@ -620,7 +621,7 @@ bool connectMQTT()
     {
       mqttclient.publish((topic + String("/IP")).c_str(), String(WiFi.localIP().toString()).c_str());
       mqttclient.publish((topic + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
-      //mqttclient.publish((topic + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
+      // mqttclient.publish((topic + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
 
       if (strlen(_settings.data.mqttTriggerPath) > 0)
       {
@@ -713,50 +714,51 @@ bool sendHaDiscovery()
                                "}";
 
   char topBuff[128];
-  //char configBuff[1024];
-  //size_t mqttContentLength;
+  // char configBuff[1024];
+  // size_t mqttContentLength;
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
     if (Json.containsKey(haDescriptor[i][0]))
     {
-    String haPayLoad = String("{") +
-                       "\"name\":\"" + haDescriptor[i][0] + "\"," +
-                       "\"stat_t\":\"" + _settings.data.mqttTopic + "/" + haDescriptor[i][0] + "\"," +
-                       "\"uniq_id\":\"" + mqttClientId + "." + haDescriptor[i][0] + "\"," +
-                       "\"ic\":\"mdi:" + haDescriptor[i][1] + "\",";
-    if (strlen(haDescriptor[i][2]) != 0)
-      haPayLoad += (String) "\"unit_of_meas\":\"" + haDescriptor[i][2] + "\",";
-    if (strlen(haDescriptor[i][3]) != 0)
-      haPayLoad += (String) "\"dev_cla\":\"" + haDescriptor[i][3] + "\",";
-    haPayLoad += haDeviceDescription;
-    haPayLoad += "}";
-    sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
-    mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
-    for (size_t i = 0; i < haPayLoad.length(); i++)
-    {
-      mqttclient.write(haPayLoad[i]);
-    }
-    mqttclient.endPublish();
+      String haPayLoad = String("{") +
+                         "\"name\":\"" + haDescriptor[i][0] + "\"," +
+                         "\"stat_t\":\"" + _settings.data.mqttTopic + "/" + haDescriptor[i][0] + "\"," +
+                         "\"uniq_id\":\"" + mqttClientId + "." + haDescriptor[i][0] + "\"," +
+                         "\"ic\":\"mdi:" + haDescriptor[i][1] + "\",";
+      if (strlen(haDescriptor[i][2]) != 0)
+        haPayLoad += (String) "\"unit_of_meas\":\"" + haDescriptor[i][2] + "\",";
 
+      if (strcmp(haDescriptor[i][2], "kWh") == 0 || strcmp(haDescriptor[i][2], "Wh") == 0)
+        haPayLoad += (String) "\"state_class\":\"total_increasing\",";
+      if (strcmp(haDescriptor[i][2], "A") == 0 || strcmp(haDescriptor[i][2], "V") == 0 || strcmp(haDescriptor[i][2], "W") == 0)
+        haPayLoad += (String) "\"state_class\":\"measurement\",";
 
-
-
-
-
-/*
-
+      if (strlen(haDescriptor[i][3]) != 0)
+        haPayLoad += (String) "\"dev_cla\":\"" + haDescriptor[i][3] + "\",";
+      haPayLoad += haDeviceDescription;
+      haPayLoad += "}";
       sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
-
-      mqttContentLength = sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s\",\"icon\": \"mdi:%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\",\"device\":{\"identifiers\":[\"%s\"], \"configuration_url\":\"http://%s\",\"name\":\"%s\", \"model\":\"%s\",\"manufacturer\":\"SoftWareCrash\",\"sw_version\":\"Victron2MQTT %s\"}}",
-                                  _settings.data.mqttTopic, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2], haDescriptor[i][3], Json["Serial_number"].as<String>().c_str(), jsonESP["IP"].as<String>().c_str(), _settings.data.deviceName, Json["Model_description"].as<String>().c_str(), SOFTWARE_VERSION);
-
-      mqttclient.beginPublish(topBuff, mqttContentLength, true);
-      for (size_t i = 0; i < mqttContentLength; i++)
+      mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
+      for (size_t i = 0; i < haPayLoad.length(); i++)
       {
-        mqttclient.write(configBuff[i]);
+        mqttclient.write(haPayLoad[i]);
       }
       mqttclient.endPublish();
-      */
+
+      /*
+
+            sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
+
+            mqttContentLength = sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s\",\"icon\": \"mdi:%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\",\"device\":{\"identifiers\":[\"%s\"], \"configuration_url\":\"http://%s\",\"name\":\"%s\", \"model\":\"%s\",\"manufacturer\":\"SoftWareCrash\",\"sw_version\":\"Victron2MQTT %s\"}}",
+                                        _settings.data.mqttTopic, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2], haDescriptor[i][3], Json["Serial_number"].as<String>().c_str(), jsonESP["IP"].as<String>().c_str(), _settings.data.deviceName, Json["Model_description"].as<String>().c_str(), SOFTWARE_VERSION);
+
+            mqttclient.beginPublish(topBuff, mqttContentLength, true);
+            for (size_t i = 0; i < mqttContentLength; i++)
+            {
+              mqttclient.write(configBuff[i]);
+            }
+            mqttclient.endPublish();
+            */
     }
   }
   return true;
