@@ -36,6 +36,7 @@ bool workerCanRun = true;
 bool dataProzessing = false;
 bool haDiscTrigger = false;
 bool haAutoDiscTrigger = false;
+bool DebugMode = false;
 unsigned int jsonSize = 0;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
@@ -191,6 +192,7 @@ void setup()
   resetCounter(true);
   _settings.load();
   haAutoDiscTrigger = _settings.data.haDiscovery;
+  DebugMode = _settings.data.debugmode;
   WiFi.persistent(true); // fix wifi save bug
   // AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
@@ -338,6 +340,7 @@ void setup()
                 strncpy(_settings.data.httpUser, request->arg("post_httpUser").c_str(), 40);
                 strncpy(_settings.data.httpPass, request->arg("post_httpPass").c_str(), 40);
                 _settings.data.haDiscovery = (request->arg("post_hadiscovery") == "true") ? true : false;
+                _settings.data.debugmode = (request->arg("post_debugmode") == "true") ? true : false;
                 _settings.save();
                 request->redirect("/reboot"); });
 
@@ -457,7 +460,7 @@ void loop()
 void prozessData()
 {
   dataProzessing = true;
-  DEBUG_WEBLN("Ve callback triggerd... prozessing data");
+DEBUG_WEBLN("VE callback triggered... prozessing data");
   getJsonData();
   notifyClients();
   dataProzessing = false;
@@ -473,21 +476,25 @@ bool getJsonData()
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
 
-  // jsonESP["Flash_Size"] = ESP.getFlashChipSize();
-  // jsonESP["Sketch_Size"] = ESP.getSketchSize();
-  // jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
-  // jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
-  // jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  // jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
-  // jsonESP["WS_Clients"] = ws.getClients();
-  // jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
+  if (DebugMode){
+    jsonESP["Flash_Size"] = ESP.getFlashChipSize();
+    jsonESP["Sketch_Size"] = ESP.getSketchSize();
+    jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+    jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
+    jsonESP["Free_Heap"] = ESP.getFreeHeap();
+    jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+//    jsonESP["WS_Clients"] = ws.getClients();
+    jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
-  // Serial.println();
-  // Serial.println("VE recived data: ");
-  //  Serial.println(myve.veEnd);
-  //  const char *descriptor;
-  //  const char *Vevalue;
-
+    Serial.println();
+    Serial.println("VE received data: ");
+    Serial.println(myve.veEnd);
+//    const char *descriptor;
+//    const char *Vevalue;
+    DEBUG_WEBLN();
+    DEBUG_WEBLN("VE received data: ");
+    DEBUG_WEBLN(myve.veEnd);
+  }
   String rawVal;
 
   for (int i = 0; i < myve.veEnd; i++)
@@ -504,13 +511,13 @@ bool getJsonData()
     rawVal += "\":\"";
     rawVal += myve.veValue[i];
     rawVal += "\"},";
-    /*
+    if (DebugMode) {
         Serial.print("[");
         Serial.print(myve.veName[i]);
         Serial.print(":");
         Serial.print(myve.veValue[i]);
         Serial.print("]");
-    */
+    }
     // search for every Vevalue in the list and replace it with clear name
     for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
     {
@@ -608,8 +615,12 @@ bool getJsonData()
     }
   }
 
-  // Serial.println();
-  //  Json["RAW"] = rawVal;
+  if (DebugMode == true)
+  {
+//    Json["RAW"] = rawVal;
+    Serial.println();
+    DEBUG_WEBLN(rawVal);
+  }
   return true;
 }
 

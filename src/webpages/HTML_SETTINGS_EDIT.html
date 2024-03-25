@@ -65,6 +65,13 @@
         </div>
     </div>
     <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="debugmode">DEBUG (for testing purposes)</span>
+        <div class="form-switch form-control" style="width:50%%; text-align: center;">
+            <input type="checkbox" class="form-check-input form control" aria-describedby="debugmode" role="switch"
+                id="post_debugmode" name="post_debugmode" value="true" %pre_debugmode%>
+        </div>
+    </div>
+    <div class="input-group mb-2">
         <span class="input-group-text w-50" id="httpUserdesc">HTTP Username</span>
         <input type="text" class="form-control" aria-describedby="httpUserdesc" id="httpUser" name="post_httpUser" maxlength="40"
             maxlength="35" value="%pre_http_user%">
