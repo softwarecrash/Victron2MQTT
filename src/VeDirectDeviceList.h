@@ -151,6 +151,7 @@ static const char * VeDirectDeviceList[][2] PROGMEM {
     {"0XA38A", "SmartShunt 1000A/50mV"},
     {"0XA38B", "SmartShunt 2000A/50mV"},
     {"0XA3F0", "Smart BuckBoost 12V/12V-50A"},
+    {"0XC030", "SmartShunt 500A/50mV IP65"},
 
     // data for the Ve Simulator
     {"0X9999", "The migthy simluator"}
