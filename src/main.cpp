@@ -106,8 +106,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   }
 }
 
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
-             void *arg, uint8_t *data, size_t len)
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
   switch (type)
   {
@@ -130,6 +129,8 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     break;
   case WS_EVT_PONG:
   case WS_EVT_ERROR:
+    wsClient = nullptr;
+    ws.cleanupClients();
     break;
   }
 }
@@ -176,7 +177,7 @@ void ReadVEData()
   while (veSerial.available())
   {
     myve.rxData(veSerial.read());
-    esp_yield();
+    //esp_yield();
   }
   // if (veSerial.available())
   //{
@@ -460,7 +461,7 @@ void loop()
 void prozessData()
 {
   dataProzessing = true;
-DEBUG_WEBLN("VE callback triggered... prozessing data");
+  DEBUG_WEBLN("VE callback triggered... prozessing data");
   getJsonData();
   notifyClients();
   dataProzessing = false;
@@ -476,21 +477,22 @@ bool getJsonData()
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
 
-  if (DebugMode){
+  if (DebugMode)
+  {
     jsonESP["Flash_Size"] = ESP.getFlashChipSize();
     jsonESP["Sketch_Size"] = ESP.getSketchSize();
     jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
     jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
     jsonESP["Free_Heap"] = ESP.getFreeHeap();
     jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
-//    jsonESP["WS_Clients"] = ws.getClients();
+    //    jsonESP["WS_Clients"] = ws.getClients();
     jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
     Serial.println();
     Serial.println("VE received data: ");
     Serial.println(myve.veEnd);
-//    const char *descriptor;
-//    const char *Vevalue;
+    //    const char *descriptor;
+    //    const char *Vevalue;
     DEBUG_WEBLN();
     DEBUG_WEBLN("VE received data: ");
     DEBUG_WEBLN(myve.veEnd);
@@ -511,12 +513,13 @@ bool getJsonData()
     rawVal += "\":\"";
     rawVal += myve.veValue[i];
     rawVal += "\"},";
-    if (DebugMode) {
-        Serial.print("[");
-        Serial.print(myve.veName[i]);
-        Serial.print(":");
-        Serial.print(myve.veValue[i]);
-        Serial.print("]");
+    if (DebugMode)
+    {
+      Serial.print("[");
+      Serial.print(myve.veName[i]);
+      Serial.print(":");
+      Serial.print(myve.veValue[i]);
+      Serial.print("]");
     }
     // search for every Vevalue in the list and replace it with clear name
     for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
@@ -617,7 +620,7 @@ bool getJsonData()
 
   if (DebugMode == true)
   {
-//    Json["RAW"] = rawVal;
+    //    Json["RAW"] = rawVal;
     Serial.println();
     DEBUG_WEBLN(rawVal);
   }
