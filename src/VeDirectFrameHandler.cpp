@@ -62,7 +62,7 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
 	 Serial.write(inbyte);
 	// if (mStop) return;
-	if ((inbyte == ':') && (mState != CHECKSUM))
+	if ((inbyte == ':') /*&& (mState != CHECKSUM)*/)
 	{
 		mState = RECORD_HEX;
 	}
@@ -109,6 +109,8 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 			mTextPointer = mValue; /* Reset value pointer */
 			mState = RECORD_VALUE;
 			break;
+
+
 		default:
 			// add byte to name, but do no overflow
 			if (mTextPointer < (mName + sizeof(mName)))
@@ -140,6 +142,12 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 		break;
 	case CHECKSUM:
 	{
+		Serial.println();
+		Serial.print("Calcula CHK: ");
+		Serial.println(mChecksum, HEX);
+		Serial.print("Recived CHK: ");
+		Serial.println(inbyte, HEX);
+
 		bool valid = mChecksum == 0;
 		// Serial.println(mChecksum);
 		if (!valid)
