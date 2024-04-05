@@ -1,68 +1,19 @@
-/* framehandler.cpp
- *
- * Arduino library to read from Victron devices using VE.Direct protocol.
- * Derived from Victron framehandler reference implementation.
- *
- * The MIT License
- *
- * Copyright (c) 2019 Victron Energy BV
- * Portions Copyright (C) 2020 Chris Terwilliger
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * 2020.05.05 - 0.2 - initial release
- * 2020.06.21 - 0.2 - add MIT license, no code changes
- * 2020.08.20 - 0.3 - corrected #include reference
- *
- */
 
 #include <Arduino.h>
 #include "VeDirectFrameHandler.h"
 
-#define MODULE "VE.Frame" // Victron seems to use this to find out where logging messages were generated
-
 // The name of the record that contains the checksum.
 static constexpr char checksumTagName[] = "CHECKSUM";
 
-VeDirectFrameHandler::VeDirectFrameHandler() : // mStop(false),	// don't know what Victron uses this for, not using
-											   mState(IDLE),
-											   mChecksum(0),
-											   mTextPointer(0),
-											   tempName(),
-											   tempValue(),
-											   frameIndex(0),
-											   veName(),
-											   veValue(),
-											   veEnd(0)
-{
-}
-
 /*
- *	rxData
+ *  rxData
  *  This function is called by the application which passes a byte of serial data
  *  It is unchanged from Victron's example code
  */
 void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
-	 Serial.write(inbyte);
-	// if (mStop) return;
-	if ((inbyte == ':') /*&& (mState != CHECKSUM)*/)
+	Serial.write(inbyte);
+	if ((inbyte == ':') && (mState != CHECKSUM))
 	{
 		mState = RECORD_HEX;
 	}
@@ -100,11 +51,14 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 			if (mTextPointer < (mName + sizeof(mName)))
 			{
 				*mTextPointer = 0; /* Zero terminate */
+				//recordNameCallback(true, mName);
 				if (strcmp(mName, checksumTagName) == 0)
 				{
 					mState = CHECKSUM;
 					break;
 				}
+			} else {
+				//recordNameCallback(false, nullptr);
 			}
 			mTextPointer = mValue; /* Reset value pointer */
 			mState = RECORD_VALUE;
@@ -127,7 +81,10 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 			if (mTextPointer < (mValue + sizeof(mValue)))
 			{
 				*mTextPointer = 0; // make zero ended
+				//recordValueCallback(true, mValue);
 				textRxEvent(mName, mValue);
+			} else {
+				//recordValueCallback(false, nullptr);
 			}
 			mState = RECORD_BEGIN;
 			break;
@@ -142,19 +99,8 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 		break;
 	case CHECKSUM:
 	{
-		Serial.println();
-		Serial.print("Calcula CHK: ");
-		Serial.println(mChecksum, HEX);
-		Serial.print("Recived CHK: ");
-		Serial.println(inbyte, HEX);
-
+		//checksumCallback(mChecksum);
 		bool valid = mChecksum == 0;
-		// Serial.println(mChecksum);
-		if (!valid)
-		{
-			veError = 0;
-			logE((char *)MODULE, (char *)"[CHECKSUM] Invalid frame");
-		}
 		mChecksum = 0;
 		mState = IDLE;
 		frameEndEvent(valid);
@@ -163,9 +109,9 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 	case RECORD_HEX:
 		if (hexRxEvent(inbyte))
 		{
+			//hexFrameCallback();
 			mChecksum = 0;
 			mState = IDLE;
-			// here put in a callback later
 		}
 		break;
 	}
@@ -183,9 +129,9 @@ void VeDirectFrameHandler::textRxEvent(char *mName, char *mValue)
 }
 
 /*
- *	frameEndEvent
+ *  frameEndEvent
  *  This function is called at the end of the received frame.  If the checksum is valid, the temp buffer is read line by line.
- *  If the name exists in the public buffer, the new value is copied to the public buffer.	If not, a new name/value entry
+ *  If the name exists in the public buffer, the new value is copied to the public buffer.  If not, a new name/value entry
  *  is created in the public buffer.
  */
 void VeDirectFrameHandler::frameEndEvent(bool valid)
@@ -193,10 +139,12 @@ void VeDirectFrameHandler::frameEndEvent(bool valid)
 	if (valid)
 	{
 		for (int i = 0; i < frameIndex; i++)
-		{ // read each name already in the temp buffer
+		{
+			// read each name already in the temp buffer
 			bool nameExists = false;
-			for (int j = 0; j <= veEnd; j++)
-			{ // compare to existing names in the public buffer
+			for (size_t j = 0; j < veEnd; j++)
+			{
+				// compare to existing names in the public buffer
 				if (strcmp(tempName[i], veName[j]) == 0)
 				{
 					strcpy(veValue[j], tempValue[i]); // overwrite tempValue in the public buffer
@@ -206,45 +154,29 @@ void VeDirectFrameHandler::frameEndEvent(bool valid)
 			}
 			if (!nameExists)
 			{
-				strcpy(veName[veEnd], tempName[i]);	  // write new Name to public buffer
+				strcpy(veName[veEnd], tempName[i]);   // write new Name to public buffer
 				strcpy(veValue[veEnd], tempValue[i]); // write new Value to public buffer
-				veEnd++;							  // increment end of public buffer
+				veEnd++;                              // increment end of public buffer
 				if (veEnd >= buffLen)
 				{ // stop any buffer overrun
 					veEnd = buffLen - 1;
 				}
 			}
 		}
-		veError = 0;
+		Serial.println("\nCRC OK");
+		veErrorCount = 0;
 		requestCallback(); // call the callback to do other things with the new data
-	}
-	else
-	{
-		veError = 1;
+	} else {
+		veErrorCount++;
+		Serial.println("\nCRC wrong");
 	}
 	frameIndex = 0; // reset frame
+	veError = veErrorCount < veErrorTol ? false : true; //set the crc error flag
 }
 
-/*
- *	logE
- *  This function included for continuity and possible future use.
- */
-void VeDirectFrameHandler::logE(char *module, char *error)
-{
-	Serial.print("MODULE: ");
-	Serial.println(module);
-	Serial.print("ERROR: ");
-	Serial.println(error);
-	return;
-}
-
-/*
- *	hexRxEvent
- *  This function included for continuity and possible future use.
- */
 bool VeDirectFrameHandler::hexRxEvent(uint8_t inbyte)
 {
-	return true; // stubbed out for future
+	return inbyte == '\n';
 }
 
 void VeDirectFrameHandler::callback(std::function<void()> func) // callback function when finnish request

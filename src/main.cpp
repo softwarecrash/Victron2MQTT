@@ -60,6 +60,7 @@ DynamicJsonDocument Json(JSON_BUFFER);
 JsonObject jsonESP = Json.createNestedObject("ESP_Data");
 #include "status-LED.h"
 ADC_MODE(ADC_VCC);
+
 //----------------------------------------------------------------------
 void saveConfigCallback()
 {
@@ -177,7 +178,7 @@ void ReadVEData()
   while (veSerial.available())
   {
     myve.rxData(veSerial.read());
-    //esp_yield();
+    // esp_yield();
   }
   // if (veSerial.available())
   //{
@@ -200,6 +201,7 @@ void setup()
   veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX /*, MYPORT_TX, false*/);
   veSerial.flush();
   veSerial.enableRxGPIOPullUp(false);
+
   myve.callback(prozessData);
 
   Serial.begin(DEBUG_BAUD);
@@ -253,8 +255,6 @@ void setup()
   topic = _settings.data.mqttTopic;
   mqttclient.setServer(_settings.data.mqttServer, _settings.data.mqttPort);
   mqttclient.setCallback(mqttCallback);
-  // mqttclient.setBufferSize(MQTT_BUFFER);
-  //  check is WiFi connected
 
   if (res)
   {
@@ -417,6 +417,7 @@ void setup()
 
 void loop()
 {
+
   if (Update.isRunning())
   {
     workerCanRun = false;
@@ -462,6 +463,7 @@ void prozessData()
 {
   dataProzessing = true;
   DEBUG_WEBLN("VE callback triggered... prozessing data");
+  Serial.println("VE callback triggered... prozessing data");
   getJsonData();
   notifyClients();
   dataProzessing = false;
@@ -485,21 +487,16 @@ bool getJsonData()
     jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
     jsonESP["Free_Heap"] = ESP.getFreeHeap();
     jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
-    //    jsonESP["WS_Clients"] = ws.getClients();
+    jsonESP["WS_Clients"] = ws.count();
     jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
     Serial.println();
-    Serial.println("VE received data: ");
-    Serial.println(myve.veEnd);
-    //    const char *descriptor;
-    //    const char *Vevalue;
-    DEBUG_WEBLN();
-    DEBUG_WEBLN("VE received data: ");
-    DEBUG_WEBLN(myve.veEnd);
+    Serial.println((String) "VE data: " + myve.veEnd + ":" + myve.veErrorCount + ":" + myve.veError);
   }
   String rawVal;
+  rawVal += (String) "VE data: " + myve.veEnd + ":" + myve.veErrorCount + ":" + myve.veError + "\n";
 
-  for (int i = 0; i < myve.veEnd; i++)
+  for (size_t i = 0; i < myve.veEnd; i++)
   {
 
     if (myve.veName[i] == NULL || strlen(myve.veName[i]) == 0 || myve.veValue[i] == NULL || strlen(myve.veValue[i]) == 0)
@@ -618,7 +615,7 @@ bool getJsonData()
     }
   }
 
-  if (DebugMode == true)
+  if (DebugMode)
   {
     //    Json["RAW"] = rawVal;
     Serial.println();
