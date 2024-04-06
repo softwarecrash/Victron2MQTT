@@ -539,8 +539,8 @@ bool getJsonData()
 
         // if the Name Device_Model, search in the list for the device code
         if (strcmp(VePrettyData[j][1], "Device_model") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(**VeDirectDeviceList[0]); k++)
+        {          
+          for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(VeDirectDeviceList[0]); k++)
           {
             if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
             {
@@ -613,6 +613,7 @@ bool getJsonData()
         break; // if we have found and prozessed the data, break the loop
       }
     }
+    Json["Device_connection"] = myve.veError ? "Disconnected" : "Connected";
   }
 
   if (DebugMode)

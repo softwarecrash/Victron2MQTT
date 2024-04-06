@@ -1,6 +1,6 @@
 // The product id: PID
 
-static const char * VeDirectDeviceList[][2] PROGMEM {
+static const char *VeDirectDeviceList[][2] PROGMEM{
     {"0X203", "BMV-700"},
     {"0X204", "BMV-702"},
     {"0X205", "BMV-700H"},
