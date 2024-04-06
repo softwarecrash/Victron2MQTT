@@ -12,7 +12,7 @@ static constexpr char checksumTagName[] = "CHECKSUM";
  */
 void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
-	Serial.write(inbyte);
+	//Serial.write(inbyte);
 	if ((inbyte == ':') && (mState != CHECKSUM))
 	{
 		mState = RECORD_HEX;

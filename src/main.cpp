@@ -37,6 +37,7 @@ bool dataProzessing = false;
 bool haDiscTrigger = false;
 bool haAutoDiscTrigger = false;
 bool DebugMode = false;
+bool remoteControlState = false;
 unsigned int jsonSize = 0;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
@@ -56,7 +57,6 @@ VeDirectFrameHandler myve;
 SoftwareSerial veSerial;
 
 DynamicJsonDocument Json(JSON_BUFFER);
-// StaticJsonDocument <JSON_BUFFER>Json;
 JsonObject jsonESP = Json.createNestedObject("ESP_Data");
 #include "status-LED.h"
 ADC_MODE(ADC_VCC);
@@ -90,20 +90,18 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
-    /*
     data[len] = 0;
-    updateProgress = true;
-    if (String((char *)data).substring(0, 9) == "wsSelInv_") // get the inverter number to display on the web
+    if (strcmp((char *)data, "A9") != 0)
     {
-      wsReqInvNum = String((char *)data).substring(9, 10).toInt();
+      if (strcmp((char *)data, "remotecontrol_on") == 0)
+      {
+        remoteControl(true);
+      }
+       if (strcmp((char *)data, "remotecontrol_off") == 0)
+      {
+        remoteControl(false);
+      }
     }
-    if (String((char *)data).substring(0, 11) == "loadSwitch_") // get switch data from web loadSwitch_1_1
-    {
-      epnode.setSlaveId(String((char *)data).substring(11, 12).toInt());
-      epnode.writeSingleCoil(0x0002, String((char *)data).substring(13, 14).toInt());
-    }
-    updateProgress = false;
-    */
   }
 }
 
@@ -180,17 +178,25 @@ void ReadVEData()
     myve.rxData(veSerial.read());
     // esp_yield();
   }
-  // if (veSerial.available())
-  //{
-  //   myve.rxData(veSerial.read());
-  // }
+}
+
+bool remoteControl(bool sw)
+{
+
+  DEBUG_WEBLN((String) "set Remote Control to: " + sw);
+  DEBUG_PRINTLN((String) "set Remote Control to: " + sw);
+  digitalWrite(MYPORT_TX, sw);
+  remoteControlState = digitalRead(MYPORT_TX);
+  mqtttimer = 0;
+  return remoteControlState;
 }
 
 void setup()
 {
   pinMode(LED_PIN, OUTPUT);
   analogWrite(LED_PIN, 0);
-  digitalWrite(MYPORT_TX, 0);
+  pinMode(MYPORT_TX, OUTPUT);
+  digitalWrite(MYPORT_TX, false);
   resetCounter(true);
   _settings.load();
   haAutoDiscTrigger = _settings.data.haDiscovery;
@@ -311,6 +317,17 @@ void setup()
       {
         haDiscTrigger = true;
         }
+      if (p->name() == "remotecontrol")
+      {
+        if(p->value().toInt() == 1){
+          remoteControl(true);
+        }
+        if(p->value().toInt() == 0){
+          remoteControl(false);
+        }
+      }
+
+
         request->send(200, "text/plain", "message received"); });
 
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -491,7 +508,7 @@ bool getJsonData()
     jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
 
     Serial.println();
-    Serial.println((String) "VE data: " + myve.veEnd + ":" + myve.veErrorCount + ":" + myve.veError);
+    Serial.println((String) "VE data: " + myve.veEnd + ":" + myve.veErrorCount + ":" + myve.veError + ":" + remoteControlState);
   }
   String rawVal;
   rawVal += (String) "VE data: " + myve.veEnd + ":" + myve.veErrorCount + ":" + myve.veError + "\n";
@@ -539,7 +556,7 @@ bool getJsonData()
 
         // if the Name Device_Model, search in the list for the device code
         if (strcmp(VePrettyData[j][1], "Device_model") == 0)
-        {          
+        {
           for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(VeDirectDeviceList[0]); k++)
           {
             if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
@@ -614,6 +631,7 @@ bool getJsonData()
       }
     }
     Json["Device_connection"] = myve.veError ? "Disconnected" : "Connected";
+    Json["Remote_Control_State"] = remoteControlState;
   }
 
   if (DebugMode)
@@ -633,7 +651,7 @@ bool connectMQTT()
     {
       mqttclient.publish((topic + String("/IP")).c_str(), String(WiFi.localIP().toString()).c_str());
       mqttclient.publish((topic + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
-      // mqttclient.publish((topic + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
+      mqttclient.subscribe((topic + "/Remote_Control").c_str());
 
       if (strlen(_settings.data.mqttTriggerPath) > 0)
       {
@@ -667,6 +685,7 @@ bool sendtoMQTT()
   //-----------------------------------------------------
   mqttclient.publish((mqttDeviceName + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
   mqttclient.publish((mqttDeviceName + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
+  mqttclient.publish((mqttDeviceName + String("/Remote_Control_State")).c_str(), remoteControlState ? "true" : "false");
   if (!_settings.data.mqttJson)
   {
 
@@ -687,10 +706,11 @@ bool sendtoMQTT()
 
 void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
 {
+  String messageTemp;
   // updateProgress = true; // stop servicing data
   if (!_settings.data.mqttJson)
   {
-    String messageTemp;
+
     for (unsigned int i = 0; i < length; i++)
     {
       messageTemp += (char)payload[i];
@@ -707,7 +727,19 @@ void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
     DEBUG_WEBLN("MQTT Data Trigger Firered Up");
     mqtttimer = 0;
   }
-  // updateProgress = false; // start data servicing again
+  if (strcmp(top, (topic + "/Remote_Control").c_str()) == 0)
+  {
+    if (messageTemp == "true")
+    {
+      mqtttimer = 0;
+      remoteControl(true);
+    }
+    if (messageTemp == "false")
+    {
+      mqtttimer = 0;
+      remoteControl(false);
+    }
+  }
 }
 
 bool sendHaDiscovery()
@@ -735,6 +767,9 @@ bool sendHaDiscovery()
       String haPayLoad = String("{") +
                          "\"name\":\"" + haDescriptor[i][0] + "\"," +
                          "\"stat_t\":\"" + _settings.data.mqttTopic + "/" + haDescriptor[i][0] + "\"," +
+                         "\"avty_t\":\"" + _settings.data.mqttTopic + "/Alive\"," +
+                         "\"pl_avail\": \"true\"," +
+                         "\"pl_not_avail\": \"false\"," +
                          "\"uniq_id\":\"" + mqttClientId + "." + haDescriptor[i][0] + "\"," +
                          "\"ic\":\"mdi:" + haDescriptor[i][1] + "\",";
       if (strlen(haDescriptor[i][2]) != 0)
@@ -756,22 +791,34 @@ bool sendHaDiscovery()
         mqttclient.write(haPayLoad[i]);
       }
       mqttclient.endPublish();
-
-      /*
-
-            sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
-
-            mqttContentLength = sprintf(configBuff, "{\"state_topic\": \"%s/%s\",\"unique_id\": \"sensor.%s_%s\",\"name\": \"%s\",\"icon\": \"mdi:%s\",\"unit_of_measurement\": \"%s\",\"device_class\":\"%s\",\"device\":{\"identifiers\":[\"%s\"], \"configuration_url\":\"http://%s\",\"name\":\"%s\", \"model\":\"%s\",\"manufacturer\":\"SoftWareCrash\",\"sw_version\":\"Victron2MQTT %s\"}}",
-                                        _settings.data.mqttTopic, haDescriptor[i][0], _settings.data.deviceName, haDescriptor[i][0], haDescriptor[i][0], haDescriptor[i][1], haDescriptor[i][2], haDescriptor[i][3], Json["Serial_number"].as<String>().c_str(), jsonESP["IP"].as<String>().c_str(), _settings.data.deviceName, Json["Model_description"].as<String>().c_str(), SOFTWARE_VERSION);
-
-            mqttclient.beginPublish(topBuff, mqttContentLength, true);
-            for (size_t i = 0; i < mqttContentLength; i++)
-            {
-              mqttclient.write(configBuff[i]);
-            }
-            mqttclient.endPublish();
-            */
     }
   }
+
+    // switch
+    String haPayLoad = String("{") +
+                       "\"name\":\"Remote_Control\"," +
+                       "\"command_topic\":\"" + _settings.data.mqttTopic + "/Remote_Control\"," +
+                       "\"stat_t\":\"" + _settings.data.mqttTopic + "/Remote_Control_State\"," +
+                       "\"uniq_id\":\"" + mqttClientId + ".Remote_Control\"," +
+                       "\"avty_t\":\"" + _settings.data.mqttTopic + "/Alive\"," +
+                       "\"pl_avail\": \"true\"," +
+                       "\"pl_not_avail\": \"false\"," +
+                       "\"ic\":\"mdi:toggle-switch-off\"," +
+                       "\"pl_on\":\"true\"," +
+                       "\"pl_off\":\"false\"," +
+                       "\"stat_on\":\"true\"," +
+                       "\"stat_off\":\"false\",";
+
+    haPayLoad += haDeviceDescription;
+    haPayLoad += "}";
+    sprintf(topBuff, "homeassistant/switch/%s/%s/config", _settings.data.mqttTopic, "Remote_Control"); // build the topic
+
+    mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
+    for (size_t i = 0; i < haPayLoad.length(); i++)
+    {
+      mqttclient.write(haPayLoad[i]);
+    }
+    mqttclient.endPublish();
+
   return true;
 }
