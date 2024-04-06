@@ -200,7 +200,8 @@ void setup()
   resetCounter(true);
   _settings.load();
   haAutoDiscTrigger = _settings.data.haDiscovery;
-  DebugMode = _settings.data.debugmode;
+  //DebugMode = _settings.data.debugmode;
+  DebugMode = true;
   WiFi.persistent(true); // fix wifi save bug
   // AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
 
@@ -358,7 +359,7 @@ void setup()
                 strncpy(_settings.data.httpUser, request->arg("post_httpUser").c_str(), 40);
                 strncpy(_settings.data.httpPass, request->arg("post_httpPass").c_str(), 40);
                 _settings.data.haDiscovery = (request->arg("post_hadiscovery") == "true") ? true : false;
-                _settings.data.debugmode = (request->arg("post_debugmode") == "true") ? true : false;
+                //_settings.data.debugmode = (request->arg("post_debugmode") == "true") ? true : false;
                 _settings.save();
                 request->redirect("/reboot"); });
 

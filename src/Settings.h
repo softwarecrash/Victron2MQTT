@@ -28,7 +28,7 @@ public:
     char httpUser[40];        // http basic auth username
     char httpPass[40];        // http basic auth password
     bool haDiscovery;         // HomeAssistant Discovery switch
-    bool debugmode;           // Debug-Mode
+    // bool debugmode;           // Debug-Mode
   } data;
 
   void load()
@@ -114,10 +114,10 @@ private:
     {
       data.haDiscovery = false;
     }
-    if (data.debugmode && !data.debugmode)
-    {
-      data.debugmode = false;
-    }
+    // if (data.debugmode && !data.debugmode)
+    //{
+    //  data.debugmode = false;
+    //}
   }
   void coVersCheck()
   {
@@ -137,7 +137,7 @@ private:
       strcpy(data.httpUser, "");
       strcpy(data.httpPass, "");
       data.haDiscovery = false;
-      data.debugmode = false;
+      // data.debugmode = false;
       save();
       load();
     }
