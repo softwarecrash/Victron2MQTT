@@ -1,64 +1,72 @@
-/* frameHandler.h
- *
- * Arduino library to read from Victron devices using VE.Direct protocol.
- * Derived from Victron framehandler reference implementation.
- * 
- * 2020.05.05 - 0.2 - initial release
- * 2021.02.23 - 0.3 - change frameLen to 22 per VE.Direct Protocol version 3.30
- * 
- */
+#pragma once
 
+//#include <stdint.h>
+//#include <functional>
 #ifndef FRAMEHANDLER_H_
 #define FRAMEHANDLER_H_
 
-const byte frameLen = 22;                       // VE.Direct Protocol: max frame size is 22
-const byte nameLen = 9;                         // VE.Direct Protocol: max name size is 9 including /0
-const byte valueLen = 33;                       // VE.Direct Protocol: max value size is 33 including /0
-const byte buffLen = 40;                        // Maximum number of lines possible from the device. Current protocol shows this to be the BMV700 at 33 lines.
-
-
-class VeDirectFrameHandler {
-
+class VeDirectFrameHandler
+{
 public:
-    VeDirectFrameHandler();
-    void rxData(uint8_t inbyte);                // byte of serial data to be passed by the application
-    void callback(std::function<void()> func);  // callback function
+	static const size_t frameLen = 22;          // VE.Direct Protocol: max frame size is 22
+	static const size_t nameLen = 9;            // VE.Direct Protocol: max name size is 9 including /0
+	static const size_t valueLen = 33;          // VE.Direct Protocol: max value size is 33 including /0
+	static const size_t buffLen = 40;           // Maximum number of lines possible from the device. Current protocol shows this to be the
+
+
+
+
+    //VeDirectFrameHandler();
+    //~VeDirectFrameHandler();
+    //void setErrorHandler(logFunction f) { logEF = f; } // error handler
+    void rxData(uint8_t inbyte);                       // byte of serial data to be passed by the application
+    //void addHexCallback(hexFrameCallback, void *);          // add function called back when hex frame is ready (sync or async)
+    void callback(std::function<void()> func);         // callback function
     std::function<void()> requestCallback;
+/*
+	constexpr VeDirectFrameHandler() = default;
+	void rxData(uint8_t inbyte);                // byte of serial data to be passed by the application
+	std::function<void(bool valid, char const * name)> recordNameCallback = [](bool, char const *){ };
+	std::function<void(bool valid, char const * value)> recordValueCallback = [](bool, char const *){ };
+	std::function<void(uint8_t checksum)> checksumCallback = [](uint8_t){ };
+	std::function<void()> hexFrameCallback = [](){ };
+	std::function<void(bool valid)> frameEndEventCallback = [](bool){ };
 
-    char veName[buffLen][nameLen] = { };        // public buffer for received names
-    char veValue[buffLen][valueLen] = { };      // public buffer for received values
+    void callback(std::function<void()> func);         // callback function
+    std::function<void()> requestCallback;
+    */
 
-    int frameIndex;                             // which line of the frame are we on
-    int veEnd;                                  // current size (end) of the public buffer
-    int veError = 1;                            //error flag for ve
+	char veName[buffLen][nameLen] = { };        // public buffer for received names
+	char veValue[buffLen][valueLen] = { };      // public buffer for received values
+
+	size_t veEnd = 0;                           // current size (end) of the public buffer
+    int veErrorTol = 10;                            // error counter for crc, if higher than error tollerance 
+    int veErrorCount = 0;   // crc error counter
+    bool veError = true;                // error flag for crc
 
 private:
-    //bool mStop;                               // not sure what Victron uses this for, not using
+	enum States {                               // state machine
+		IDLE,
+		RECORD_BEGIN,
+		RECORD_NAME,
+		RECORD_VALUE,
+		CHECKSUM,
+		RECORD_HEX
+	};
 
-    enum States {                               // state machine
-        IDLE,
-        RECORD_BEGIN,
-        RECORD_NAME,
-        RECORD_VALUE,
-        CHECKSUM,
-        RECORD_HEX
-    };
+	int mState = IDLE;                          // current state
+	uint8_t mChecksum = 0;                      // checksum value
+	int frameIndex = 0;                         // which line of the frame are we on
 
-    int mState;                                 // current state
+	char * mTextPointer = nullptr;              // pointer to the private buffer we're writing to, name or value
 
-    uint8_t	mChecksum;                          // checksum value
+	char mName[nameLen] = { };                  // buffer for the field name
+	char mValue[valueLen] = { };                // buffer for the field value
+	char tempName[frameLen][nameLen] = { };     // private buffer for received names
+	char tempValue[frameLen][valueLen] = { };   // private buffer for received values
 
-    char * mTextPointer;                        // pointer to the private buffer we're writing to, name or value
-
-    char mName[9];                              // buffer for the field name
-    char mValue[33];                            // buffer for the field value
-    char tempName[frameLen][nameLen];           // private buffer for received names
-    char tempValue[frameLen][valueLen];         // private buffer for received values
-
-    void textRxEvent(char *, char *);
-    void frameEndEvent(bool);
-    void logE(char *, char *);
-    bool hexRxEvent(uint8_t);
+	void textRxEvent(char *, char *);
+	void frameEndEvent(bool);
+	bool hexRxEvent(uint8_t);
 };
-
 #endif // FRAMEHANDLER_H_

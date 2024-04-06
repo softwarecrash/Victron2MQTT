@@ -128,5 +128,6 @@ static const char * haDescriptor[][4] PROGMEM {
       {"DC_monitor_mode", "multicast", "", ""},
       {"DC_input_voltage", "current-dc", "V", "voltage"},
       {"DC_input_current", "current-dc", "A", "current"},
-      {"DC_input_power", "current-dc", "W", "power"}
+      {"DC_input_power", "current-dc", "W", "power"},
+      {"Device_connection", "alert-circle-outline", "", ""}
       };

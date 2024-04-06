@@ -49,6 +49,14 @@
     <div class="col dF"><span id="relaystate"></span></div>
 </div>
 
+<div class="row gx-0 mb-2 bg-light rounded bg-opacity-50 px-2">
+    <div class="col">Remote Control: </div>
+    <div class="col dF">
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch"
+                id="remotecontrol"></div>
+    </div>
+</div>
+
 <div class="d-grid gap-2">
     <a class="btn btn-primary btn-block" href="/settings" role="button">Settings</a>
 </div>
@@ -61,6 +69,7 @@
 
 $( document ).ready(function() {
     initWebSocket();
+    initButton();
 });
     //window.addEventListener('load', onLoad);
     function initWebSocket() {
@@ -101,6 +110,8 @@ $( document ).ready(function() {
 
         document.getElementById("relaystate").innerHTML = data.Relay;
 
+        document.getElementById("remotecontrol").checked = data.Remote_Control_State;
+
 
         for (var i = 0; i < dataRows.length; i++) {
             if (dataRows[i].innerHTML.indexOf("undefined") > -1) {
@@ -117,7 +128,15 @@ $( document ).ready(function() {
         }
 
     }
-
+    function initButton() {
+        document.getElementById('remotecontrol').addEventListener('click', remoteControlSend);
+    }
+    function remoteControlSend() {
+        let switchVal;
+        if (document.getElementById('remotecontrol').checked) { switchVal = 'remotecontrol_on' }
+        else { switchVal = 'remotecontrol_off' }
+        websocket.send(switchVal);
+    }
     function onLoad(event) {
         initWebSocket();
     }

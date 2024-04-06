@@ -60,3 +60,5 @@ void prozessData();
  * 
 */
 bool  sendHaDiscovery();
+
+bool remoteControl(bool sw);
