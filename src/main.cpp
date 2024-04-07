@@ -753,7 +753,7 @@ bool sendHaDiscovery()
                                "{\"ids\":[\"" + mqttClientId + "\"]," +
                                "\"name\":\"" + _settings.data.deviceName + "\"," +
                                "\"cu\":\"http://" + WiFi.localIP().toString() + "\"," +
-                               "\"mdl\":\"" + Json["Model_description"].as<String>().c_str() + "\"," +
+                               "\"mdl\":\"" + Json["Device_model"].as<String>().c_str() + "\"," +
                                "\"mf\":\"SoftWareCrash\"," +
                                "\"sw\":\"" + SOFTWARE_VERSION + "\"" +
                                "}";
@@ -777,7 +777,7 @@ bool sendHaDiscovery()
         haPayLoad += (String) "\"unit_of_meas\":\"" + haDescriptor[i][2] + "\",";
 
       if (strcmp(haDescriptor[i][2], "kWh") == 0 || strcmp(haDescriptor[i][2], "Wh") == 0)
-        haPayLoad += (String) "\"state_class\":\"total_increasing\",";
+        haPayLoad += (String) "\"state_class\":\"total\",";
       if (strcmp(haDescriptor[i][2], "A") == 0 || strcmp(haDescriptor[i][2], "V") == 0 || strcmp(haDescriptor[i][2], "W") == 0)
         haPayLoad += (String) "\"state_class\":\"measurement\",";
 
@@ -812,7 +812,7 @@ bool sendHaDiscovery()
 
     haPayLoad += haDeviceDescription;
     haPayLoad += "}";
-    sprintf(topBuff, "homeassistant/switch/%s/%s/config", _settings.data.mqttTopic, "Remote_Control"); // build the topic
+    sprintf(topBuff, "homeassistant/switch/%s/%s/config", _settings.data.deviceName, "Remote_Control"); // build the topic
 
     mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
     for (size_t i = 0; i < haPayLoad.length(); i++)
