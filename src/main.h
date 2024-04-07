@@ -6,7 +6,7 @@
 #define MYPORT_RX 13
 #define LED_PIN 02 //D4 with the LED on Wemos D1 Mini
 
-#define DEBUG_BAUD 115200
+
 
 #define JSON_BUFFER 2048
 //#define MQTT_BUFFER 512
@@ -28,17 +28,16 @@
 #endif
 #endif
 
+
 // DON'T edit version here, place version number in platformio.ini (custom_prog_version) !!!
 #define SOFTWARE_VERSION SWVERSION
+#define DBG_BAUD 115200
+#define DBG Serial
+#define DBG_WEBLN(...) WebSerial.println(__VA_ARGS__)
+#define DBG_SERIAL(...) DBG(__VA_ARGS__)
+#define DBG_BEGIN(...) DBG.begin(__VA_ARGS__)
+#define DBG_PRINTLN(...) DBG.println(__VA_ARGS__)
 
-#define DEBUG_WEB(...) WebSerial.print(__VA_ARGS__)
-#define DEBUG_WEBLN(...) WebSerial.println(__VA_ARGS__)
-#define DEBUG_WEBF(...) WebSerial.printf(__VA_ARGS__)
-
-#define DEBUG_SERIAL(...) Serial(__VA_ARGS__)
-#define DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
-#define DEBUG_PRINTLN(...) Serial.println(__VA_ARGS__)
-#define DEBUG_PRINTF(...) Serial.printf(__VA_ARGS__)
 
 
 bool getJsonData();
@@ -62,3 +61,9 @@ void prozessData();
 bool  sendHaDiscovery();
 
 bool remoteControl(bool sw);
+
+/**
+ * @brief this function act like s/n/printf() and give the output to the configured serial and webserial
+ *
+ */
+void writeLog(const char* format, ...);

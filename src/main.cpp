@@ -36,7 +36,6 @@ bool workerCanRun = true;
 bool dataProzessing = false;
 bool haDiscTrigger = false;
 bool haAutoDiscTrigger = false;
-bool DebugMode = false;
 bool remoteControlState = false;
 unsigned int jsonSize = 0;
 unsigned long mqtttimer = 0;
@@ -64,7 +63,7 @@ ADC_MODE(ADC_VCC);
 //----------------------------------------------------------------------
 void saveConfigCallback()
 {
-  DEBUG_WEBLN(F("Should save config"));
+  writeLog("Should save config");
   shouldSaveConfig = true;
 }
 
@@ -72,7 +71,6 @@ void notifyClients()
 {
   if (wsClient != nullptr && wsClient->canSend())
   {
-    DEBUG_WEB(F("<WEBS> Data sent to WebSocket... "));
     size_t len = measureJson(Json);
     AsyncWebSocketMessageBuffer *buffer = ws.makeBuffer(len);
     if (buffer)
@@ -80,7 +78,7 @@ void notifyClients()
       serializeJson(Json, (char *)buffer->get(), len + 1);
       wsClient->text(buffer);
     }
-    DEBUG_WEBLN(F("Done"));
+    writeLog("Data sent to WebSocket");
   }
 }
 
@@ -97,7 +95,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       {
         remoteControl(true);
       }
-       if (strcmp((char *)data, "remotecontrol_off") == 0)
+      if (strcmp((char *)data, "remotecontrol_off") == 0)
       {
         remoteControl(false);
       }
@@ -111,15 +109,13 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     wsClient = client;
-    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-    DEBUG_WEBF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    writeLog("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     if (!dataProzessing /*&& wsClient != nullptr && wsClient->canSend()*/)
       notifyClients();
 
     break;
   case WS_EVT_DISCONNECT:
-    Serial.printf("WebSocket client #%u disconnected\n", client->id());
-    DEBUG_WEBF("WebSocket client #%u disconnected\n", client->id());
+    writeLog("WebSocket client #%u disconnected\n", client->id());
     wsClient = nullptr;
     ws.cleanupClients();
     break;
@@ -145,8 +141,6 @@ bool resetCounter(bool count)
 
       if (bootcount >= 10 && bootcount < 20)
       {
-        // bootcount = 0;
-        // ESP.rtcUserMemoryWrite(16, &bootcount, sizeof(bootcount));
         _settings.reset();
         ESP.eraseConfig();
         ESP.restart();
@@ -176,15 +170,13 @@ void ReadVEData()
   while (veSerial.available())
   {
     myve.rxData(veSerial.read());
-    // esp_yield();
   }
 }
 
 bool remoteControl(bool sw)
 {
 
-  DEBUG_WEBLN((String) "set Remote Control to: " + sw);
-  DEBUG_PRINTLN((String) "set Remote Control to: " + sw);
+  writeLog("set Remote Control to: %d", sw);
   digitalWrite(MYPORT_TX, sw);
   remoteControlState = digitalRead(MYPORT_TX);
   mqtttimer = 0;
@@ -200,22 +192,14 @@ void setup()
   resetCounter(true);
   _settings.load();
   haAutoDiscTrigger = _settings.data.haDiscovery;
-  //DebugMode = _settings.data.debugmode;
-  DebugMode = true;
   WiFi.persistent(true); // fix wifi save bug
-  // AsyncWiFiManager wm(&server, &dns); // create wifimanager instance
-
   veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX /*, MYPORT_TX, false*/);
   veSerial.flush();
   veSerial.enableRxGPIOPullUp(false);
-
   myve.callback(prozessData);
-
-  Serial.begin(DEBUG_BAUD);
+  DBG_BEGIN(DBG_BAUD);
 
   sprintf(mqttClientId, "%s-%06X", _settings.data.deviceName, ESP.getChipId());
-
-  // https://github.com/alanswx/ESPAsyncWiFiManager/issues/72
 
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
   AsyncWiFiManagerParameter custom_mqtt_user("mqtt_user", "MQTT User", NULL, 32);
@@ -238,7 +222,6 @@ void setup()
   wm.addParameter(&custom_device_name);
 
   wm.setSaveConfigCallback(saveConfigCallback);
-  // wm.setConnectTimeout(30);       // how long to try to connect for before continuing
   wm.setConfigPortalTimeout(120); // auto close configportal after n seconds
 
   bool res = wm.autoConnect("Victron2MQTT-AP");
@@ -451,7 +434,7 @@ void loop()
       MDNS.update();
       if (millis() - mqtttimer > (_settings.data.mqttRefresh * 1000) || mqtttimer == 0)
       {
-        DEBUG_WEBLN("<MQTT> Data Send...");
+        writeLog("<MQTT> Data Send...");
         sendtoMQTT(); // Update data to MQTT server if we should
         mqtttimer = millis();
       }
@@ -472,7 +455,7 @@ void loop()
 
   if (restartNow && millis() >= (RestartTimer + 500))
   {
-    DEBUG_WEBLN("Restart");
+    writeLog("Restart");
     ESP.reset();
   }
 }
@@ -480,40 +463,25 @@ void loop()
 void prozessData()
 {
   dataProzessing = true;
-  DEBUG_WEBLN("VE callback triggered... prozessing data");
-  Serial.println("VE callback triggered... prozessing data");
+  writeLog("VE callback triggered... prozessing data");
   getJsonData();
   notifyClients();
   dataProzessing = false;
-
-  // Serial.println(ESP.getFreeHeap());
-
-  // float error = 1/0;
-  // Serial.println(error);
 }
 
 bool getJsonData()
 {
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
-
-  if (DebugMode)
-  {
-    jsonESP["Flash_Size"] = ESP.getFlashChipSize();
-    jsonESP["Sketch_Size"] = ESP.getSketchSize();
-    jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
-    jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
-    jsonESP["Free_Heap"] = ESP.getFreeHeap();
-    jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
-    jsonESP["WS_Clients"] = ws.count();
-    jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
-
-    Serial.println();
-    Serial.println((String) "VE data: " + myve.veEnd + ":" + myve.veErrorCount + ":" + myve.veError + ":" + remoteControlState);
-  }
-  String rawVal;
-  rawVal += (String) "VE data: " + myve.veEnd + ":" + myve.veErrorCount + ":" + myve.veError + "\n";
-
+  jsonESP["Flash_Size"] = ESP.getFlashChipSize();
+  jsonESP["Sketch_Size"] = ESP.getSketchSize();
+  jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+  jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
+  jsonESP["Free_Heap"] = ESP.getFreeHeap();
+  jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  jsonESP["WS_Clients"] = ws.count();
+  jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
+  writeLog("VE data: %d:%d:%d",myve.veEnd, myve.veErrorCount,myve.veError);
   for (size_t i = 0; i < myve.veEnd; i++)
   {
 
@@ -522,20 +490,7 @@ bool getJsonData()
       i = myve.veEnd;
       break;
     }
-
-    rawVal += "{\"";
-    rawVal += myve.veName[i];
-    rawVal += "\":\"";
-    rawVal += myve.veValue[i];
-    rawVal += "\"},";
-    if (DebugMode)
-    {
-      Serial.print("[");
-      Serial.print(myve.veName[i]);
-      Serial.print(":");
-      Serial.print(myve.veValue[i]);
-      Serial.print("]");
-    }
+    writeLog("[%s:%s]",myve.veName[i], myve.veValue[i]);
     // search for every Vevalue in the list and replace it with clear name
     for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
     {
@@ -634,13 +589,6 @@ bool getJsonData()
     Json["Device_connection"] = myve.veError ? "Disconnected" : "Connected";
     Json["Remote_Control_State"] = remoteControlState;
   }
-
-  if (DebugMode)
-  {
-    //    Json["RAW"] = rawVal;
-    Serial.println();
-    DEBUG_WEBLN(rawVal);
-  }
   return true;
 }
 
@@ -656,7 +604,7 @@ bool connectMQTT()
 
       if (strlen(_settings.data.mqttTriggerPath) > 0)
       {
-        DEBUG_WEBLN("MQTT Data Trigger Subscribed");
+        writeLog("MQTT Data Trigger Subscribed");
         mqttclient.subscribe(_settings.data.mqttTriggerPath);
       }
       return true;
@@ -725,7 +673,7 @@ void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
 
   if (strlen(_settings.data.mqttTriggerPath) > 0 && strcmp(top, _settings.data.mqttTriggerPath) == 0)
   {
-    DEBUG_WEBLN("MQTT Data Trigger Firered Up");
+    writeLog("MQTT Data Trigger Firered Up");
     mqtttimer = 0;
   }
   if (strcmp(top, (topic + "/Remote_Control").c_str()) == 0)
@@ -795,31 +743,45 @@ bool sendHaDiscovery()
     }
   }
 
-    // switch
-    String haPayLoad = String("{") +
-                       "\"name\":\"Remote_Control\"," +
-                       "\"command_topic\":\"" + _settings.data.mqttTopic + "/Remote_Control\"," +
-                       "\"stat_t\":\"" + _settings.data.mqttTopic + "/Remote_Control_State\"," +
-                       "\"uniq_id\":\"" + mqttClientId + ".Remote_Control\"," +
-                       "\"avty_t\":\"" + _settings.data.mqttTopic + "/Alive\"," +
-                       "\"pl_avail\": \"true\"," +
-                       "\"pl_not_avail\": \"false\"," +
-                       "\"ic\":\"mdi:toggle-switch-off\"," +
-                       "\"pl_on\":\"true\"," +
-                       "\"pl_off\":\"false\"," +
-                       "\"stat_on\":\"true\"," +
-                       "\"stat_off\":\"false\",";
+  // switch
+  String haPayLoad = String("{") +
+                     "\"name\":\"Remote_Control\"," +
+                     "\"command_topic\":\"" + _settings.data.mqttTopic + "/Remote_Control\"," +
+                     "\"stat_t\":\"" + _settings.data.mqttTopic + "/Remote_Control_State\"," +
+                     "\"uniq_id\":\"" + mqttClientId + ".Remote_Control\"," +
+                     "\"avty_t\":\"" + _settings.data.mqttTopic + "/Alive\"," +
+                     "\"pl_avail\": \"true\"," +
+                     "\"pl_not_avail\": \"false\"," +
+                     "\"ic\":\"mdi:toggle-switch-off\"," +
+                     "\"pl_on\":\"true\"," +
+                     "\"pl_off\":\"false\"," +
+                     "\"stat_on\":\"true\"," +
+                     "\"stat_off\":\"false\",";
 
-    haPayLoad += haDeviceDescription;
-    haPayLoad += "}";
-    sprintf(topBuff, "homeassistant/switch/%s/%s/config", _settings.data.mqttTopic, "Remote_Control"); // build the topic
+  haPayLoad += haDeviceDescription;
+  haPayLoad += "}";
+  sprintf(topBuff, "homeassistant/switch/%s/%s/config", _settings.data.mqttTopic, "Remote_Control"); // build the topic
 
-    mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
-    for (size_t i = 0; i < haPayLoad.length(); i++)
-    {
-      mqttclient.write(haPayLoad[i]);
-    }
-    mqttclient.endPublish();
+  mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
+  for (size_t i = 0; i < haPayLoad.length(); i++)
+  {
+    mqttclient.write(haPayLoad[i]);
+  }
+  mqttclient.endPublish();
 
   return true;
+}
+
+void writeLog(const char *format, ...)
+{
+  char msg[256];
+  va_list args;
+
+  va_start(args, format);
+  vsnprintf(msg, sizeof(msg), format, args); // do check return value
+  va_end(args);
+
+  // write msg to the log
+  DBG_PRINTLN(msg);
+  DBG_WEBLN(msg);
 }

@@ -1,7 +1,7 @@
-
 #include <Arduino.h>
 #include "VeDirectFrameHandler.h"
 
+extern void writeLog(const char* format, ...);
 // The name of the record that contains the checksum.
 static constexpr char checksumTagName[] = "CHECKSUM";
 
@@ -163,12 +163,12 @@ void VeDirectFrameHandler::frameEndEvent(bool valid)
 				}
 			}
 		}
-		Serial.println("\nCRC OK");
+		writeLog("\nCRC OK");
 		veErrorCount = 0;
 		requestCallback(); // call the callback to do other things with the new data
 	} else {
 		veErrorCount++;
-		Serial.println("\nCRC wrong");
+		writeLog("\nCRC wrong");
 	}
 	frameIndex = 0; // reset frame
 	veError = veErrorCount < veErrorTol ? false : true; //set the crc error flag
