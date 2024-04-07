@@ -785,7 +785,7 @@ bool sendHaDiscovery()
         haPayLoad += (String) "\"dev_cla\":\"" + haDescriptor[i][3] + "\",";
       haPayLoad += haDeviceDescription;
       haPayLoad += "}";
-      sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.deviceName, haDescriptor[i][0]); // build the topic
+      sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.mqttTopic, haDescriptor[i][0]); // build the topic
       mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
       for (size_t i = 0; i < haPayLoad.length(); i++)
       {
@@ -812,7 +812,7 @@ bool sendHaDiscovery()
 
     haPayLoad += haDeviceDescription;
     haPayLoad += "}";
-    sprintf(topBuff, "homeassistant/switch/%s/%s/config", _settings.data.deviceName, "Remote_Control"); // build the topic
+    sprintf(topBuff, "homeassistant/switch/%s/%s/config", _settings.data.mqttTopic, "Remote_Control"); // build the topic
 
     mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
     for (size_t i = 0; i < haPayLoad.length(); i++)
