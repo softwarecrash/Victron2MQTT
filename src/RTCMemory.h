@@ -16,6 +16,7 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with RTCMemory; if not, see <http://www.gnu.org/licenses/>      *
  ***************************************************************************/
+//10.4.204 modifyd by softwarecrash, removed fs and other things for saving lot of space
 #ifndef RTCMEMORY_H
 #define RTCMEMORY_H
 
@@ -50,21 +51,6 @@ public:
    * Return true if the operation is completed successfully, otherwise false.
    */
   bool save();
-
-  /**
-   * Write data to flash memory.
-   *
-   * Return true if the operation is completed successfully, otherwise false.
-   */
-  bool backup();
-
-  /**
-   * Write data to both RTC and flash RTCMemory. It is equivalent to subsequent call to save() and
-   * backup().
-   *
-   * Return true if both write operations are completed successfully, otherwise false.
-   */
-  bool persist();
 
   /**
    * Get a pointer to the user buffer, structured accordingly to the typename T.
@@ -113,28 +99,6 @@ private:
   bool ready;
 
   /**
-   * Verbosity levels:
-   * 0 - No output (Default)
-   * 1 - Only errors
-   * 2 - Debug
-   */
-  const static int verbosity = 0;
-
-  /**
-   * Load data from flash.
-   *
-   * Return true if it reads valid data, otherwise false (return false also if filepath is not set).
-   */
-  bool readFromFlash();
-
-  /**
-   * Save data to flash.
-   *
-   * Return true on success, otherwise false (return false also if filepath is not set).
-   */
-  bool writeToFlash();
-
-  /**
    * Calculate the CRC (32bit) of the given buffer.
    *
    * Return the CRC code.
@@ -159,45 +123,22 @@ RTCMemory<T, N>::RTCMemory() : ready(false) {
 
 template<typename T, int N> bool RTCMemory<T, N>::begin() {
   if (ready) {
-    if (verbosity > 1) Serial.println("Instance already initialized");
     return true;
   }
 
-  if (verbosity > 1) Serial.print("Loading RTC memory... ");
-
   if (!ESP.rtcUserMemoryRead(OFFSET, (uint32_t *)&rtcData, sizeof(RTCData))) {
-    if (verbosity > 0) Serial.println("Read RTC memory failure");
     return false;
   }
 
   uint32_t crcOfData = calculateCRC32((uint8_t *)&rtcData.data, USER_RTC_MEMORY_SIZE);
-  if (verbosity > 1) {
-    Serial.print("Calculated CRC: ");
-    Serial.println(crcOfData, HEX);
-    Serial.print("CRC read from RTC memory: ");
-    Serial.println(rtcData.crc32, HEX);
-  }
 
   ready = true;
 
   if (crcOfData != rtcData.crc32) {
-    if (verbosity > 0)
-      Serial.print("CRC in RTC memory doesn't match calculated CRC. Data are "
-                   "invalid! Trying to restore backup from flash memory..");
-
-    //if (readFromFlash()) {
-   //   if (verbosity > 1) Serial.println("Loading backup from flash ok");
-   // } else {
-    //  if (verbosity > 0) Serial.println("Loading backup from flash FAILED, data are resetted");
       clearBuffer();
-    //  writeToFlash();
       return false;
    // }
-  } else {
-    if (verbosity > 1) Serial.println("CRC is correct");
   }
-
-  if (verbosity > 1) Serial.println("Done!");
   return true;
 }
 
@@ -207,32 +148,17 @@ template<typename T, int N> bool RTCMemory<T, N>::save() {
     rtcData.crc32 = crcOfData;
 
     if (ESP.rtcUserMemoryWrite(OFFSET, (uint32_t *)&rtcData, sizeof(RTCData))) {
-      if (verbosity > 1) Serial.println("Write to RTC memory done");
       return true;
     } else {
-      if (verbosity > 0) Serial.println("Write to RTC memory failed");
       return false;
     }
   } else {
-    if (verbosity > 0) Serial.println("Call begin() before using this method");
     return false;
   }
 }
 
-template<typename T, int N> bool RTCMemory<T, N>::persist() {
-  if (ready) {
-    bool res = save();
-    if (res) { return writeToFlash(); }
-  } else {
-    if (verbosity > 0) Serial.println("Call begin() before using this method");
-  }
-  return false;
-}
-
 template<typename T, int N> T *RTCMemory<T, N>::getData() {
   if (ready) { return reinterpret_cast<T *>(rtcData.data); }
-
-  if (verbosity > 0) Serial.println("Call init before other calls!");
   return nullptr;
 };
 
