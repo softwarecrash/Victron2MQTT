@@ -137,7 +137,6 @@ template<typename T, int N> bool RTCMemory<T, N>::begin() {
   if (crcOfData != rtcData.crc32) {
       clearBuffer();
       return false;
-   // }
   }
   return true;
 }
