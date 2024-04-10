@@ -17,6 +17,8 @@
 #include <WebSerialLite.h>
 #include <SoftwareSerial.h>
 
+#include <RTCMemory.h>
+
 #include "VeDirectFrameHandler.h"
 #include "VeDirectDataList.h"
 #include "VeDirectDeviceList.h"
@@ -54,6 +56,7 @@ AsyncWebSocketClient *wsClient;
 DNSServer dns;
 VeDirectFrameHandler myve;
 SoftwareSerial veSerial;
+RTCMemory<rtcData> rtcMemory;
 
 DynamicJsonDocument Json(JSON_BUFFER);
 JsonObject jsonESP = Json.createNestedObject("ESP_Data");
@@ -130,66 +133,59 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   }
 }
 
-bool resetCounter(bool count)
-{
-
-  if (count)
-  {
-    if (ESP.getResetInfoPtr()->reason == 6)
-    {
-      ESP.rtcUserMemoryRead(16, &bootcount, sizeof(bootcount));
-
-      if (bootcount >= 10 && bootcount < 20)
-      {
-        _settings.reset();
-        ESP.eraseConfig();
-        ESP.restart();
-      }
-      else
-      {
-        bootcount++;
-        ESP.rtcUserMemoryWrite(16, &bootcount, sizeof(bootcount));
-      }
-    }
-    else
-    {
-      bootcount = 0;
-      ESP.rtcUserMemoryWrite(16, &bootcount, sizeof(bootcount));
-    }
-  }
-  else
-  {
-    bootcount = 0;
-    ESP.rtcUserMemoryWrite(16, &bootcount, sizeof(bootcount));
-  }
-  return true;
-}
-
 void ReadVEData()
 {
   while (veSerial.available())
   {
     myve.rxData(veSerial.read());
+    esp_yield();
   }
+  //    if (veSerial.available())
+  // {
+  //   myve.rxData(veSerial.read());
+  // }
 }
 
 bool remoteControl(bool sw)
 {
-
   writeLog("set Remote Control to: %d", sw);
   digitalWrite(MYPORT_TX, sw);
-  remoteControlState = digitalRead(MYPORT_TX);
+  rtcData *RTCmem = rtcMemory.getData();
+  RTCmem->remoteControlState = sw;
+  rtcMemory.save();
+  remoteControlState = sw;
   mqtttimer = 0;
   return remoteControlState;
 }
 
 void setup()
 {
+  DBG_BEGIN(DBG_BAUD);
   pinMode(LED_PIN, OUTPUT);
   analogWrite(LED_PIN, 0);
   pinMode(MYPORT_TX, OUTPUT);
-  digitalWrite(MYPORT_TX, false);
-  resetCounter(true);
+
+  if (!rtcMemory.begin())
+  {
+    remoteControlState = false;
+  }
+  rtcData *RTCmem = rtcMemory.getData();
+  remoteControlState = RTCmem->remoteControlState;
+  Serial.println(RTCmem->bootcount);
+  if (ESP.getResetInfoPtr()->reason == 6)
+  {
+    RTCmem->bootcount++;
+    if (RTCmem->bootcount >= 10)
+    {
+      _settings.reset();
+      ESP.eraseConfig();
+      Serial.println("reset called");
+      ESP.restart();
+    }
+  }
+  rtcMemory.save();
+
+  digitalWrite(MYPORT_TX, remoteControlState);
   _settings.load();
   haAutoDiscTrigger = _settings.data.haDiscovery;
   WiFi.persistent(true); // fix wifi save bug
@@ -197,8 +193,7 @@ void setup()
   veSerial.flush();
   veSerial.enableRxGPIOPullUp(false);
   myve.callback(prozessData);
-  DBG_BEGIN(DBG_BAUD);
-
+  
   sprintf(mqttClientId, "%s-%06X", _settings.data.deviceName, ESP.getChipId());
 
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
@@ -413,7 +408,8 @@ void setup()
     jsonESP["sw_version"] = SOFTWARE_VERSION;
   }
   analogWrite(LED_PIN, 255);
-  resetCounter(false);
+  RTCmem->bootcount = 0;
+  rtcMemory.save();
 }
 
 void loop()
@@ -481,7 +477,8 @@ bool getJsonData()
   jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
   jsonESP["WS_Clients"] = ws.count();
   jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
-  writeLog("VE data: %d:%d:%d",myve.veEnd, myve.veErrorCount,myve.veError);
+  jsonESP[F("Runtime")] = millis() / 1000;
+  writeLog("VE data: %d:%d:%d", myve.veEnd, myve.veErrorCount, myve.veError);
   for (size_t i = 0; i < myve.veEnd; i++)
   {
 
@@ -490,8 +487,8 @@ bool getJsonData()
       i = myve.veEnd;
       break;
     }
-    writeLog("[%s:%s]",myve.veName[i], myve.veValue[i]);
-    // search for every Vevalue in the list and replace it with clear name
+    // writeLog("[%s:%s]",myve.veName[i], myve.veValue[i]);
+    //  search for every Vevalue in the list and replace it with clear name
     for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
     {
       if (strcmp(VePrettyData[j][0], myve.veName[i]) == 0) // search the real descriptor in the array
@@ -600,7 +597,7 @@ bool connectMQTT()
     {
       mqttclient.publish((topic + String("/IP")).c_str(), String(WiFi.localIP().toString()).c_str());
       mqttclient.publish((topic + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
-      mqttclient.subscribe((topic + "/Remote_Control").c_str());
+                                                                            //  mqttclient.subscribe((topic + "/Remote_Control").c_str());
 
       if (strlen(_settings.data.mqttTriggerPath) > 0)
       {
@@ -782,6 +779,6 @@ void writeLog(const char *format, ...)
   va_end(args);
 
   // write msg to the log
-  DBG_PRINTLN(msg);
-  DBG_WEBLN(msg);
+  // DBG_PRINTLN(msg);
+  // DBG_WEBLN(msg);
 }

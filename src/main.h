@@ -5,11 +5,7 @@
 #define MYPORT_TX 12
 #define MYPORT_RX 13
 #define LED_PIN 02 //D4 with the LED on Wemos D1 Mini
-
-
-
 #define JSON_BUFFER 2048
-//#define MQTT_BUFFER 512
 
 #define FlashSize ESP.getFreeSketchSpace()
 #define ESP01
@@ -28,8 +24,6 @@
 #endif
 #endif
 
-
-// DON'T edit version here, place version number in platformio.ini (custom_prog_version) !!!
 #define SOFTWARE_VERSION SWVERSION
 #define DBG_BAUD 115200
 #define DBG Serial
@@ -38,7 +32,10 @@
 #define DBG_BEGIN(...) DBG.begin(__VA_ARGS__)
 #define DBG_PRINTLN(...) DBG.println(__VA_ARGS__)
 
-
+typedef struct {
+  byte bootcount;
+  bool remoteControlState;
+} rtcData;
 
 bool getJsonData();
 
