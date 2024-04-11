@@ -171,7 +171,7 @@ void setup()
   }
   rtcData *RTCmem = rtcMemory.getData();
   remoteControlState = RTCmem->remoteControlState;
-  Serial.println(RTCmem->bootcount);
+  Serial.printf("bootcount is: %d \n", RTCmem->bootcount);
   if (ESP.getResetInfoPtr()->reason == 6)
   {
     RTCmem->bootcount++;
@@ -245,6 +245,7 @@ void setup()
   {
     // set the device name
     MDNS.begin(_settings.data.deviceName);
+    MDNS.addService("http", "tcp", 80);
     WiFi.hostname(_settings.data.deviceName);
 
     Json["Device_name"] = _settings.data.deviceName;
@@ -401,8 +402,8 @@ void setup()
     WebSerial.begin(&server);
 
     server.begin();
-    MDNS.addService("http", "tcp", 80);
-    MDNS.update();
+    //MDNS.addService("http", "tcp", 80);
+    //MDNS.update();
 
     jsonESP["IP"] = WiFi.localIP();
     jsonESP["sw_version"] = SOFTWARE_VERSION;
@@ -414,7 +415,7 @@ void setup()
 
 void loop()
 {
-
+MDNS.update();
   if (Update.isRunning())
   {
     workerCanRun = false;
@@ -427,7 +428,7 @@ void loop()
     if (WiFi.status() == WL_CONNECTED)
     {                      // No use going to next step unless WIFI is up and running.
       ws.cleanupClients(); // clean unused client connections
-      MDNS.update();
+      //MDNS.update();
       if (millis() - mqtttimer > (_settings.data.mqttRefresh * 1000) || mqtttimer == 0)
       {
         writeLog("<MQTT> Data Send...");
