@@ -598,7 +598,7 @@ bool connectMQTT()
     {
       mqttclient.publish((topic + String("/IP")).c_str(), String(WiFi.localIP().toString()).c_str());
       mqttclient.publish((topic + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
-                                                                            //  mqttclient.subscribe((topic + "/Remote_Control").c_str());
+      mqttclient.subscribe((topic + "/Remote_Control").c_str());
 
       if (strlen(_settings.data.mqttTriggerPath) > 0)
       {
