@@ -780,6 +780,6 @@ void writeLog(const char *format, ...)
   va_end(args);
 
   // write msg to the log
-  // DBG_PRINTLN(msg);
-  // DBG_WEBLN(msg);
+   DBG_PRINTLN(msg);
+   DBG_WEBLN(msg);
 }
