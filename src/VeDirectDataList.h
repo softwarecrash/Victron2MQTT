@@ -79,7 +79,7 @@ static const char * haDescriptor[][4] PROGMEM {
       {"Battery_current_3", "current-dc", "A", "current"},
       {"Load_current", "battery-charging", "A", "current"},
       {"Load_output_state", "export", "", ""},
-      {"Battery_temperature", "thermometer", "°C", "thermometer"},
+      {"Battery_temperature", "thermometer", "°C", "temperature"},
       {"Instantaneous_power", "solar-power", "W", "power"},
       {"Consumed_Amp_Hours", "home-battery-outline", "Ah", ""},
       {"SOC", "battery-charging", "%", "battery"},
