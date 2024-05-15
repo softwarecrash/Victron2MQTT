@@ -8,7 +8,7 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 - get essential data over webinterface, get all data like cell voltage and more over MQTT
 - get Json over web at /livejson?
 - firmware update over webinterface
-- Remote Control
+- [Remote Control](https://github.com/softwarecrash/Victron2MQTT/wiki/Remote-Control)
 - [Homeassistant Discovery](https://github.com/softwarecrash/Victron2MQTT/wiki/HomeAssistant-integration)
 
 **Main screen:**
@@ -36,7 +36,7 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 
 # How to use:
 - flash the bin file to an ESP8266 (recommended Wemos D1 Mini) with [Tasmotizer](https://github.com/tasmota/tasmotizer/releases)
-- connect the ESP like the wiring diagram
+- connect the ESP like the [wiring diagram](https://github.com/softwarecrash/Victron2MQTT/wiki/Wiring-Diagram)
 - search for the wifi ap "Victron2MQTT-AP" and connect to it
 - surf to 192.168.4.1 and set up your wifi and optional MQTT
 - that's it :)
