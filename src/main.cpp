@@ -655,19 +655,19 @@ void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
 {
   String messageTemp;
   // updateProgress = true; // stop servicing data
-  if (!_settings.data.mqttJson)
-  {
+//  if (!_settings.data.mqttJson)
+ // {
 
     for (unsigned int i = 0; i < length; i++)
     {
       messageTemp += (char)payload[i];
     }
-  }
-  else
-  {
-    StaticJsonDocument<1024> mqttJsonAnswer;
-    deserializeJson(mqttJsonAnswer, (const byte *)payload, length);
-  }
+ // }
+ // else
+ // {
+ //   StaticJsonDocument<1024> mqttJsonAnswer;
+ //   deserializeJson(mqttJsonAnswer, (const byte *)payload, length);
+ // }
 
   if (strlen(_settings.data.mqttTriggerPath) > 0 && strcmp(top, _settings.data.mqttTriggerPath) == 0)
   {
