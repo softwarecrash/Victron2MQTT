@@ -477,6 +477,7 @@ bool getJsonData()
 {
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
+  //jsonESP["ESP_IP"] = String(WiFi.localIP().toString()).c_str();
   jsonESP["Flash_Size"] = ESP.getFlashChipSize();
   jsonESP["Sketch_Size"] = ESP.getSketchSize();
   jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();

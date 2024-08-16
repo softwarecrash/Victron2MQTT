@@ -44,5 +44,7 @@ String htmlProcessor(const String &var)
         return (_settings.data.haDiscovery ? "checked" : "");
     //if (var == F("pre_debugmode"))
     //    return (_settings.data.debugmode ? "checked" : "");
+    if (var == F("pre_keeprcstate"))
+        return (_settings.data.keepRcState ? "checked" : "");
     return String();
 }
