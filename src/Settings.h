@@ -29,6 +29,8 @@ public:
     char httpPass[40];        // http basic auth password
     bool haDiscovery;         // HomeAssistant Discovery switch
     // bool debugmode;           // Debug-Mode
+    bool keepRcState;
+    bool rcState;
   } data;
 
   void load()
@@ -118,6 +120,14 @@ private:
     //{
     //  data.debugmode = false;
     //}
+    if (data.keepRcState && !data.keepRcState)
+    {
+      data.keepRcState = false;
+    }
+    if (data.rcState && !data.rcState)
+    {
+      data.rcState = false;
+    }
   }
   void coVersCheck()
   {
@@ -138,6 +148,8 @@ private:
       strcpy(data.httpPass, "");
       data.haDiscovery = false;
       // data.debugmode = false;
+      data.keepRcState = false;
+      data.rcState = false;
       save();
       load();
     }

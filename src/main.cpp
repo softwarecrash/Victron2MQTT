@@ -153,6 +153,11 @@ bool remoteControl(bool sw)
   rtcData *RTCmem = rtcMemory.getData();
   RTCmem->remoteControlState = sw;
   rtcMemory.save();
+  if(_settings.data.keepRcState)
+  {
+    _settings.data.rcState = sw;
+    _settings.save();
+  }
   remoteControlState = sw;
   mqtttimer = 0;
   return remoteControlState;
@@ -184,9 +189,10 @@ void setup()
     }
   }
   rtcMemory.save();
-
-  digitalWrite(MYPORT_TX, remoteControlState);
   _settings.load();
+  if(_settings.data.keepRcState) remoteControlState = _settings.data.rcState;
+  digitalWrite(MYPORT_TX, remoteControlState);
+  
   haAutoDiscTrigger = _settings.data.haDiscovery;
   WiFi.persistent(true); // fix wifi save bug
   veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX /*, MYPORT_TX, false*/);
@@ -339,6 +345,7 @@ void setup()
                 strncpy(_settings.data.httpPass, request->arg("post_httpPass").c_str(), 40);
                 _settings.data.haDiscovery = (request->arg("post_hadiscovery") == "true") ? true : false;
                 //_settings.data.debugmode = (request->arg("post_debugmode") == "true") ? true : false;
+                _settings.data.keepRcState = (request->arg("post_keeprcstate") == "true") ? true : false;
                 _settings.save();
                 request->redirect("/reboot"); });
 
