@@ -298,22 +298,14 @@ void setup()
     server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
               {
       if(strlen(_settings.data.httpUser) > 0 && !request->authenticate(_settings.data.httpUser, _settings.data.httpPass)) return request->requestAuthentication();
-      AsyncWebParameter *p = request->getParam(0);
-      if (p->name() == "ha")
-      {
-        haDiscTrigger = true;
-        }
-      if (p->name() == "remotecontrol")
-      {
-        if(p->value().toInt() == 1){
-          remoteControl(true);
-        }
-        if(p->value().toInt() == 0){
-          remoteControl(false);
-        }
-      }
-
-
+    String message;
+    if (request->hasParam("ha")) {
+      haDiscTrigger = true;
+    }
+    if (request->hasParam("remotecontrol")) {
+      message = request->getParam("remotecontrol")->value();
+      remoteControl((message == "1") ? true:false);
+    }    
         request->send(200, "text/plain", "message received"); });
 
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
