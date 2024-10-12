@@ -18,7 +18,7 @@ jobs:
 
       - name: Clone Central Repository
         run: |
-          git clone https://github.com/all-solutions/Flash2MQTT.git central_repo
+          git clone https://$GITHUB_ACTOR:${{ secrets.CENTRAL_REPO_TOKEN }}@github.com/all-solutions/Flash2MQTT.git central_repo
 
       - name: Copy Firmware Files
         run: |
@@ -56,7 +56,7 @@ jobs:
           cd central_repo
           git add firmware/${{ github.event.repository.name }}
           git commit -m "Update firmware for ${{ github.event.repository.name }} to version ${{ github.event.release.tag_name }}"
-          git push
+          git push origin HEAD:master
 
       - name: Update firmware_list.json
         run: |
