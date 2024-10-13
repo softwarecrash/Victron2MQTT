@@ -35,7 +35,7 @@ Little Program for ESP82XX to get the Victron data to web and MQTT
 
 
 # How to use:
-- flash the bin file to an ESP8266 (recommended Wemos D1 Mini) with [Tasmotizer](https://github.com/tasmota/tasmotizer/releases)
+- flash your ESP8266 (recommended Wemos D1 Mini) with our [Flash2MQTT-Tool](https://all-solutions.github.io/Flash2MQTT/?get=Victron2MQTT) or with [Tasmotizer](https://github.com/tasmota/tasmotizer/releases)
 - connect the ESP like the [wiring diagram](https://github.com/softwarecrash/Victron2MQTT/wiki/Wiring-Diagram)
 - search for the wifi ap "Victron2MQTT-AP" and connect to it
 - surf to 192.168.4.1 and set up your wifi and optional MQTT
