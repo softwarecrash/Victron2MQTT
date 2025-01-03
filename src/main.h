@@ -27,7 +27,7 @@
 #define SOFTWARE_VERSION SWVERSION
 #define DBG_BAUD 115200
 #define DBG Serial
-#define DBG_WEBLN(...) WebSerial.println(__VA_ARGS__)
+#define DBG_WEBLN(...) webSerial.println(__VA_ARGS__)
 #define DBG_SERIAL(...) DBG(__VA_ARGS__)
 #define DBG_BEGIN(...) DBG.begin(__VA_ARGS__)
 #define DBG_PRINTLN(...) DBG.println(__VA_ARGS__)

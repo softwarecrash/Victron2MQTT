@@ -14,7 +14,8 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 
-#include <WebSerialLite.h>
+//#include <WebSerialLite.h>
+#include <MycilaWebSerial.h>
 #include <SoftwareSerial.h>
 
 #include <RTCMemory.h>
@@ -57,6 +58,7 @@ DNSServer dns;
 VeDirectFrameHandler myve;
 SoftwareSerial veSerial;
 RTCMemory<rtcData> rtcMemory;
+WebSerial webSerial;
 
 DynamicJsonDocument Json(JSON_BUFFER);
 JsonObject jsonESP = Json.createNestedObject("ESP_Data");
@@ -117,6 +119,8 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
       notifyClients();
 
     break;
+    case WS_EVT_PING:
+      break;
   case WS_EVT_DISCONNECT:
     writeLog("WebSocket client #%u disconnected\n", client->id());
     wsClient = nullptr;
@@ -398,7 +402,8 @@ void setup()
     server.addHandler(&ws);
 
     // WebSerial is accessible at "<IP Address>/webserial" in browser
-    WebSerial.begin(&server);
+    //WebSerial.begin(&server);
+    webSerial.begin(&server);
 
     server.begin();
     //MDNS.addService("http", "tcp", 80);
