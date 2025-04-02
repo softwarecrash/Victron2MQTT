@@ -452,6 +452,7 @@ MDNS.update();
         jsonSize = measureJson(Json);
       }
     }
+    jsonESP["Wifi_RSSI"] = WiFi.RSSI();
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))

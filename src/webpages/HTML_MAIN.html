@@ -66,7 +66,7 @@
     var websocket;
     var dataRows = document.getElementsByClassName("dR");
     var dataFields = document.getElementsByClassName("dF");
-
+    var wifiSvg = '<svg class="wifi-symbol" viewBox="0 15 64 64" xmlns="http://www.w3.org/2000/svg" width="32" height="32"><path id="level5" d="M8 32 A33 32 0 0 1 56 32" stroke="black" stroke-width="4" fill="none" /><path id="level4" d="M14 38 A26 26 0 0 1 50 38" stroke="black" stroke-width="4" fill="none" /><path id="level3" d="M20 44 A18 20 0 0 1 44 44" stroke="black" stroke-width="4" fill="none" /><path id="level2" d="M26 50 A10 14 0 0 1 38 50" stroke="black" stroke-width="4" fill="none"/><circle id="level1" cx="32" cy="56" r="3" fill="black"/></svg>';
 $( document ).ready(function() {
     initWebSocket();
     initButton();
@@ -94,7 +94,7 @@ $( document ).ready(function() {
     function onMessage(event) {
         var data = JSON.parse(event.data);
 
-        document.getElementById("devicename").innerHTML = data.Device_name == null ? 'No Connection' : data.Device_name;
+        document.getElementById("devicename").innerHTML = data.Device_name == null ? 'No Connection' +'   '+ wifiSvg : data.Device_name  +'   '+ wifiSvg;
         document.getElementById("SOCbar").innerHTML = data.SOC + '%%';
         $('#SOCbar').width(Number(data.SOC) + "%%").attr('aria-valuenow', Number(data.SOC));
 
@@ -126,7 +126,7 @@ $( document ).ready(function() {
         } else {
             document.getElementById("vcc_alert").style.display = 'none';
         }
-
+        setWiFiSignal(data.ESP_Data.Wifi_RSSI);
     }
     function initButton() {
         document.getElementById('remotecontrol').addEventListener('click', remoteControlSend);
@@ -147,6 +147,25 @@ $( document ).ready(function() {
             websocket.send("A9");
         }
     }
+    function setWiFiSignal(rssi) {
+    const levels = ['level1', 'level2', 'level3', 'level4', 'level5'];
+    const colors = ["red", "orange", "gold", "yellowgreen", "green"];
+    let level = 0;
+    if (rssi > -60) level = 4;
+    else if (rssi > -70) level = 3;
+    else if (rssi > -80) level = 2;
+    else if (rssi > -90) level = 1;
+
+    levels.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const on = i <= level;
+      if (el.tagName === "circle") el.setAttribute("fill", on ? colors[level] : "#ccc");
+      else el.setAttribute("stroke", on ? colors[level] : "#ccc");
+    });
+
+    document.getElementById("rssiText").textContent = `RSSI: ${rssi} dBm`;
+  }
 </script>
 %pre_foot_template%
 <p hidden>Hidden Helper</p>
