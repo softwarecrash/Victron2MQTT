@@ -20,6 +20,10 @@
 
 #include <RTCMemory.h>
 
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <NonBlockingDallas.h>
+
 #include "VeDirectFrameHandler.h"
 #include "VeDirectDataList.h"
 #include "VeDirectDeviceList.h"
@@ -59,6 +63,10 @@ VeDirectFrameHandler myve;
 SoftwareSerial veSerial;
 RTCMemory<rtcData> rtcMemory;
 WebSerial webSerial;
+
+OneWire oneWire(TEMPSENS_PIN);
+DallasTemperature dallasTemp(&oneWire);
+NonBlockingDallas tempSens(&dallasTemp);
 
 DynamicJsonDocument Json(JSON_BUFFER);
 JsonObject jsonESP = Json.createNestedObject("ESP_Data");
@@ -411,6 +419,9 @@ void setup()
 
     jsonESP["IP"] = WiFi.localIP();
     jsonESP["sw_version"] = SOFTWARE_VERSION;
+
+    tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
+    tempSens.onTemperatureChange(handleTemperatureChange);
   }
   analogWrite(LED_PIN, 255);
   RTCmem->bootcount = 0;
@@ -774,6 +785,13 @@ bool sendHaDiscovery()
   mqttclient.endPublish();
 
   return true;
+}
+
+void handleTemperatureChange(int deviceIndex, int32_t temperatureRAW)
+{
+  writeLog("<DS18x> DS18B20_%d RAW:%d Celsius:%f Fahrenheit:%f", deviceIndex+1, temperatureRAW, tempSens.rawToCelsius(temperatureRAW), tempSens.rawToFahrenheit(temperatureRAW));
+  char msgBuffer[8];
+  jsonESP["DS18B20_" + String(deviceIndex+1)] = dtostrf(tempSens.rawToCelsius(temperatureRAW), 4, 2, msgBuffer);
 }
 
 void writeLog(const char *format, ...)
