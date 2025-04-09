@@ -789,9 +789,12 @@ bool sendHaDiscovery()
 
 void handleTemperatureChange(int deviceIndex, int32_t temperatureRAW)
 {
-  writeLog("<DS18x> DS18B20_%d RAW:%d Celsius:%f Fahrenheit:%f", deviceIndex+1, temperatureRAW, tempSens.rawToCelsius(temperatureRAW), tempSens.rawToFahrenheit(temperatureRAW));
+  float tempCels = tempSens.rawToCelsius(temperatureRAW);
+  if(tempCels <= -55 || tempCels >= 125)
+  return;
+  writeLog("<DS18x> DS18B20_%d  Celsius:%f", deviceIndex+1, tempCels);
   char msgBuffer[8];
-  jsonESP["DS18B20_" + String(deviceIndex+1)] = dtostrf(tempSens.rawToCelsius(temperatureRAW), 4, 2, msgBuffer);
+  jsonESP["DS18B20_" + String(deviceIndex+1)] = dtostrf(tempCels, 4, 2, msgBuffer);
 }
 
 void writeLog(const char *format, ...)
