@@ -431,6 +431,7 @@ void setup()
 void loop()
 {
 MDNS.update();
+tempSens.update();
   if (Update.isRunning())
   {
     workerCanRun = false;
