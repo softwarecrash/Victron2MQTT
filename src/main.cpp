@@ -202,7 +202,8 @@ void setup()
   }
   rtcMemory.save();
   _settings.load();
-  if(_settings.data.keepRcState) remoteControlState = _settings.data.rcState;
+  if(_settings.data.keepRcState)
+    remoteControlState = _settings.data.rcState;
   digitalWrite(MYPORT_TX, remoteControlState);
   
   haAutoDiscTrigger = _settings.data.haDiscovery;
@@ -235,7 +236,7 @@ void setup()
   wm.addParameter(&custom_device_name);
 
   wm.setSaveConfigCallback(saveConfigCallback);
-  wm.setConfigPortalTimeout(120); // auto close configportal after n seconds
+  wm.setConfigPortalTimeout(300); // auto close configportal after n seconds
 
   bool res = wm.autoConnect("Victron2MQTT-AP");
 
