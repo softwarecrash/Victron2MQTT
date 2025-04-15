@@ -26,6 +26,9 @@
 #endif
 #endif
 
+//for wifimanager fork test
+#define CORE_DEBUG_LEVEL 0
+
 #define SOFTWARE_VERSION SWVERSION
 #define DBG_BAUD 115200
 #define DBG Serial
