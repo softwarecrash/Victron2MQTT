@@ -500,9 +500,6 @@ bool getJsonData()
   jsonESP["WS_Clients"] = ws.count();
   //jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
   jsonESP["Runtime"] = millis() / 1000;
-/*   char rt[12];
-  snprintf(rt, sizeof(rt), "%02lu:%02lu:%02lu", millis() / 3600000UL, (millis() / 60000UL) % 60, (millis() / 1000UL) % 60);
-  jsonESP["Runtime"] = rt; */
   writeLog("VE data: %d:%d:%d", myve.veEnd, myve.veErrorCount, myve.veError);
   for (size_t i = 0; i < myve.veEnd; i++)
   {
