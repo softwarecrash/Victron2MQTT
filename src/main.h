@@ -7,7 +7,7 @@
 #define LED_PIN 02 //D4 with the LED on Wemos D1 Mini
 #define TEMPSENS_PIN 04 // DS18B20 Pin
 #define TIME_INTERVAL 2500 // Time interval among sensor readings [milliseconds]
-#define JSON_BUFFER 2048
+#define JSON_BUFFER 1536//2048
 
 #define FlashSize ESP.getFreeSketchSpace()
 #define ESP01

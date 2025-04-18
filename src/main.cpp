@@ -422,6 +422,10 @@ void setup()
 
     jsonESP["IP"] = WiFi.localIP();
     jsonESP["sw_version"] = SOFTWARE_VERSION;
+/*     jsonESP["Flash_Size"] = ESP.getFlashChipSize();
+    jsonESP["Sketch_Size"] = ESP.getSketchSize();
+    jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
+    jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize(); */
 
     tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
     tempSens.onTemperatureChange(handleTemperatureChange);
@@ -490,16 +494,12 @@ bool getJsonData()
 {
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
-  //jsonESP["ESP_IP"] = String(WiFi.localIP().toString()).c_str();
-  jsonESP["Flash_Size"] = ESP.getFlashChipSize();
-  jsonESP["Sketch_Size"] = ESP.getSketchSize();
-  jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
-  jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize();
   jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  //jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
+  jsonESP["json_space"] = Json.capacity() - Json.memoryUsage();
   jsonESP["WS_Clients"] = ws.count();
-  jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
-  jsonESP[F("Runtime")] = millis() / 1000;
+  //jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
+  jsonESP["Runtime"] = millis() / 1000;
   writeLog("VE data: %d:%d:%d", myve.veEnd, myve.veErrorCount, myve.veError);
   for (size_t i = 0; i < myve.veEnd; i++)
   {
