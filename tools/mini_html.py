@@ -41,14 +41,16 @@ try:
    print(Path(x).stem)
    cpp_output += "static const char "+Path(x).stem+"[] PROGMEM = R\"rawliteral("
    f = open(x, "r")
-   if env.GetProjectOption("build_type") == "debug":
-        content = f.read()  
-   else:
-        content = minify_html.minify(f.read(), minify_js=True)
+   #if env.GetProjectOption("build_type") == "debug":
+   #     content = f.read()  
+   #else:
+   #     content = minify_html.minify(f.read(), minify_js=True)
+   content = minify_html.minify(f.read(), minify_js=True)
+   #content = f.read() 
    cpp_output += content
    f.close()
    cpp_output += ")rawliteral\";\n"
-   cpp_output += "#define " +Path(x).stem+ "_LEN " + str(len(content)) +"\n"
+   #cpp_output += "#define " +Path(x).stem+ "_LEN " + str(len(content)) +"\n"
 
 
    f = open ("./src/html.h", "w")
