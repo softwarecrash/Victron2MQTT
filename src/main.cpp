@@ -413,7 +413,6 @@ void setup()
     server.addHandler(&ws);
 
     // WebSerial is accessible at "<IP Address>/webserial" in browser
-    // WebSerial.begin(&server);
     webSerial.begin(&server);
 
     server.begin();
@@ -422,11 +421,6 @@ void setup()
 
     jsonESP["IP"] = WiFi.localIP();
     jsonESP["sw_version"] = SOFTWARE_VERSION;
-    /*     jsonESP["Flash_Size"] = ESP.getFlashChipSize();
-        jsonESP["Sketch_Size"] = ESP.getSketchSize();
-        jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
-        jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize(); */
-
     tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
     tempSens.onTemperatureChange(handleTemperatureChange);
   }
