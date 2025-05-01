@@ -1,4 +1,4 @@
-#pragma once
+ #pragma once
 
 #include <Arduino.h>
 
@@ -265,12 +265,12 @@ const VePrettyEntry VePrettyData[] PROGMEM = {
   {key_61, name_61, op_61},
   {key_62, name_62, op_62},
 };
-const size_t VePrettyDataSize = sizeof(VePrettyData) / sizeof(VePrettyData[0]);
-
+const size_t VePrettyDataSize = sizeof(VePrettyData) / sizeof(VePrettyData[0]); 
 
 
 
 /* 
+
 static const char * VePrettyData[][3] PROGMEM {
 // get name, pretify name, value operator
 {"V","Voltage", "1000",}, // display in webUI | Dont edit
@@ -336,7 +336,7 @@ static const char * VePrettyData[][3] PROGMEM {
 {"DC_IN_V","DC_input_voltage","100"},
 {"DC_IN_I","DC_input_current","10"},
 {"DC_IN_P","DC_input_power","0"},
-}; */
+};*/
 static const char * haDescriptor[][4] PROGMEM {
       // state_topic, icon, unit_ofmeasurement, class
       {"Voltage", "car-battery", "V", "voltage"},

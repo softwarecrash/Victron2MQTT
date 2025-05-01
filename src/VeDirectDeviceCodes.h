@@ -1,4 +1,4 @@
-#pragma once
+ #pragma once
 
 #include <Arduino.h>
 
@@ -222,14 +222,14 @@ static const VeCodeEntry VeDirectDeviceCodeMPPT[] PROGMEM = {
   {VeDirectDeviceCodeMPPT_code_2, VeDirectDeviceCodeMPPT_text_2},
 };
 static const size_t VeDirectDeviceCodeMPPTSize = sizeof(VeDirectDeviceCodeMPPT) / sizeof(VeDirectDeviceCodeMPPT[0]);
-
-
+ 
 
 
 
 
 
 /* 
+
 
 // AR (Alarm_code)
 static const char * VeDirectDeviceCodeAR[][2] PROGMEM{

@@ -521,7 +521,7 @@ bool getJsonData()
         char op[8];
         strcpy_P(name, entry.name);
         strcpy_P(op, entry.op);
-    
+
         if (strlen(op) > 0 && strcmp(op, "0") != 0) {
           Json[FPSTR(entry.name)] = (int)((atof(myve.veValue[i]) / atoi(op)) * 100 + 0.5) / 100.0;
         } else if (strcmp(op, "0") == 0) {
@@ -529,7 +529,6 @@ bool getJsonData()
         } else {
           Json[FPSTR(entry.name)] = myve.veValue[i];
         }
-    
         if (strcmp(name, "Device_model") == 0) {
           uint16_t deviceID = strtol(myve.veValue[i], nullptr, 16);
           VeDeviceEntry devEntry;
@@ -552,7 +551,6 @@ bool getJsonData()
             Json[FPSTR(entry.name)] = FPSTR(modelName);
           }
         }
-    
         struct CodeMap {
           const char* label;
           const VeCodeEntry* table;
@@ -707,6 +705,8 @@ bool sendHaDiscovery()
                                "}";
 
   char topBuff[128];
+  // char configBuff[1024];
+  // size_t mqttContentLength;
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
     if (Json.containsKey(haDescriptor[i][0]))
