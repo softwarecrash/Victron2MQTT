@@ -529,19 +529,6 @@ bool getJsonData()
           Json[FPSTR(VePrettyData[j][1])] = myve.veValue[i];
         }
 
-/*         // if the Name Device_Model, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Device_model") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(VeDirectDeviceList[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceList[k][1]);
-              break;
-            }
-          }
-        } */
-
         if (strcmp(VePrettyData[j][1], "Device_model") == 0) {
           uint16_t deviceID = strtol(myve.veValue[i], nullptr, 16);
           // Search device entry in flash
