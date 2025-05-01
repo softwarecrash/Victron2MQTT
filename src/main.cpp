@@ -529,7 +529,7 @@ bool getJsonData()
           Json[FPSTR(VePrettyData[j][1])] = myve.veValue[i];
         }
 
-        // if the Name Device_Model, search in the list for the device code
+/*         // if the Name Device_Model, search in the list for the device code
         if (strcmp(VePrettyData[j][1], "Device_model") == 0)
         {
           for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(VeDirectDeviceList[0]); k++)
@@ -540,7 +540,34 @@ bool getJsonData()
               break;
             }
           }
+        } */
+
+        if (strcmp(VePrettyData[j][1], "Device_model") == 0) {
+          uint16_t deviceID = strtol(myve.veValue[i], nullptr, 16);
+          // Search device entry in flash
+          VeDeviceEntry entry;
+          size_t left = 0;
+          size_t right = VeDeviceListSize;
+          const char* modelName = nullptr;
+        
+          while (left < right) {
+            size_t mid = (left + right) / 2;
+            memcpy_P(&entry, &VeDeviceList[mid], sizeof(entry));
+            if (deviceID == entry.id) {
+              modelName = (const char*)pgm_read_ptr(&entry.name);
+              break;
+            } else if (deviceID < entry.id) {
+              right = mid;
+            } else {
+              left = mid + 1;
+            }
+          }
+          if (modelName) {
+            Json[FPSTR(VePrettyData[j][1])] = FPSTR(modelName);
+          }
         }
+
+
 
         // if the Name AR - Alarm_code, search in the list for the device code
         if (strcmp(VePrettyData[j][1], "Alarm_code") == 0)
