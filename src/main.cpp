@@ -509,133 +509,6 @@ bool getJsonData()
     }
     // writeLog("[%s:%s]",myve.veName[i], myve.veValue[i]);
     //  search for every Vevalue in the list and replace it with clear name
-/*     for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
-    {
-      if (strcmp(VePrettyData[j][0], myve.veName[i]) == 0) // search the real descriptor in the array
-      {
-        // check if we have a data operator
-        if (strlen(VePrettyData[j][2]) > 0 && strcmp(VePrettyData[j][2], "0") != 0)
-        {
-          Json[FPSTR(VePrettyData[j][1])] = (int)((atof(myve.veValue[i]) / atoi(VePrettyData[j][2])) * 100 + 0.5) / 100.0;
-        }
-        else if (strcmp(VePrettyData[j][2], "0") == 0)
-        {
-          Json[FPSTR(VePrettyData[j][1])] = atoi(myve.veValue[i]);
-        }
-        else
-        {
-          Json[FPSTR(VePrettyData[j][1])] = myve.veValue[i];
-        }
-
-        //--------------------------new---------------------------------
-        if (strcmp(VePrettyData[j][1], "Device_model") == 0)
-        {
-          uint16_t deviceID = strtol(myve.veValue[i], nullptr, 16);
-          // Search device entry in flash
-          VeDeviceEntry entry;
-          size_t left = 0;
-          size_t right = VeDeviceListSize;
-          const char *modelName = nullptr;
-
-          while (left < right)
-          {
-            size_t mid = (left + right) / 2;
-            memcpy_P(&entry, &VeDeviceList[mid], sizeof(entry));
-            if (deviceID == entry.id)
-            {
-              modelName = (const char *)pgm_read_ptr(&entry.name);
-              break;
-            }
-            else if (deviceID < entry.id)
-            {
-              right = mid;
-            }
-            else
-            {
-              left = mid + 1;
-            }
-          }
-          if (modelName)
-          {
-            Json[FPSTR(VePrettyData[j][1])] = FPSTR(modelName);
-          }
-        }
-        //-------------------end new changed-----------------------------------------
-
-        // if the Name AR - Alarm_code, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Alarm_code") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeAR) / sizeof(VeDirectDeviceCodeAR[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeAR[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeAR[k][1]);
-              break;
-            }
-          }
-        }
-        // if the Name OR - Off_reason, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Off_reason") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeOR) / sizeof(VeDirectDeviceCodeOR[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeOR[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeOR[k][1]);
-              break;
-            }
-          }
-        }
-        // if the Name CS - Operation_state, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Operation_state") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeCS) / sizeof(VeDirectDeviceCodeCS[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeCS[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeCS[k][1]);
-              break;
-            }
-          }
-        }
-        // if the Name ERR - Current_error, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Current_error") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeERR) / sizeof(VeDirectDeviceCodeERR[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeERR[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeERR[k][1]);
-              break;
-            }
-          }
-        }
-        // if the Name MPPT - Tracker_operation_mode, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Tracker_operation_mode") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeMPPT) / sizeof(VeDirectDeviceCodeMPPT[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeMPPT[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeMPPT[k][1]);
-              break;
-            }
-          }
-        }
-        break; // if we have found and prozessed the data, break the loop
-      }
-    } */
-
-
-
-
-
-
-
-
-
-
-
     for (size_t j = 0; j < VePrettyDataSize; j++) {
       VePrettyEntry entry;
       memcpy_P(&entry, &VePrettyData[j], sizeof(entry));
@@ -649,7 +522,6 @@ bool getJsonData()
         strcpy_P(name, entry.name);
         strcpy_P(op, entry.op);
     
-        // Wert umrechnen, wenn Operator angegeben
         if (strlen(op) > 0 && strcmp(op, "0") != 0) {
           Json[FPSTR(entry.name)] = (int)((atof(myve.veValue[i]) / atoi(op)) * 100 + 0.5) / 100.0;
         } else if (strcmp(op, "0") == 0) {
@@ -658,7 +530,6 @@ bool getJsonData()
           Json[FPSTR(entry.name)] = myve.veValue[i];
         }
     
-        // --- Spezialbehandlung für Device_model (PID) ---
         if (strcmp(name, "Device_model") == 0) {
           uint16_t deviceID = strtol(myve.veValue[i], nullptr, 16);
           VeDeviceEntry devEntry;
@@ -682,7 +553,6 @@ bool getJsonData()
           }
         }
     
-        // --- Tabellenzuordnung mit PROGMEM-Kompatibilität ---
         struct CodeMap {
           const char* label;
           const VeCodeEntry* table;
@@ -712,20 +582,10 @@ bool getJsonData()
             }
           }
         }
-    
-        break; // Ein passender Eintrag gefunden → nicht weiter suchen
+        break;
       }
     }
     
-
-
-
-
-
-
-
-
-
     Json["Device_connection"] = myve.veError ? "Disconnected" : "Connected";
     Json["Remote_Control_State"] = remoteControlState;
   }
@@ -847,8 +707,6 @@ bool sendHaDiscovery()
                                "}";
 
   char topBuff[128];
-  // char configBuff[1024];
-  // size_t mqttContentLength;
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
     if (Json.containsKey(haDescriptor[i][0]))
