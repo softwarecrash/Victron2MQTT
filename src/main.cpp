@@ -179,7 +179,7 @@ void setup()
 {
   DBG_BEGIN(DBG_BAUD);
   pinMode(LED_PIN, OUTPUT);
-  analogWrite(LED_PIN, 0);
+  analogWrite(LED_PIN, 255-_settings.data.LEDBrightness);
   pinMode(MYPORT_TX, OUTPUT);
 
   if (!rtcMemory.begin())
@@ -425,7 +425,7 @@ void setup()
     tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
     tempSens.onTemperatureChange(handleTemperatureChange);
   }
-  analogWrite(LED_PIN, _settings.data.LEDBrightness);
+  analogWrite(LED_PIN, 255);
   RTCmem->bootcount = 0;
   rtcMemory.save();
 }
