@@ -353,6 +353,7 @@ void setup()
                 _settings.data.haDiscovery = (request->arg("post_hadiscovery") == "true") ? true : false;
                 //_settings.data.debugmode = (request->arg("post_debugmode") == "true") ? true : false;
                 _settings.data.keepRcState = (request->arg("post_keeprcstate") == "true") ? true : false;
+                _settings.data.LEDBrightness = request->arg("post_led").toInt();
                 _settings.save();
                 request->redirect("/reboot"); });
 
@@ -424,7 +425,7 @@ void setup()
     tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
     tempSens.onTemperatureChange(handleTemperatureChange);
   }
-  analogWrite(LED_PIN, 255);
+  analogWrite(LED_PIN, _settings.data.LEDBrightness);
   RTCmem->bootcount = 0;
   rtcMemory.save();
 }

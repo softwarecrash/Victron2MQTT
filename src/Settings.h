@@ -31,6 +31,7 @@ public:
     // bool debugmode;           // Debug-Mode
     bool keepRcState;
     bool rcState;
+    int LEDBrightness;         // brigthness of led
   } data;
 
   void load()
@@ -128,6 +129,10 @@ private:
     {
       data.rcState = false;
     }
+    if (data.LEDBrightness && !data.LEDBrightness)
+    {
+      data.LEDBrightness = 127;
+    }
   }
   void coVersCheck()
   {
@@ -150,6 +155,7 @@ private:
       // data.debugmode = false;
       data.keepRcState = false;
       data.rcState = false;
+      data.LEDBrightness = 127;
       save();
       load();
     }

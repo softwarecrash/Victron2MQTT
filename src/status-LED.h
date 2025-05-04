@@ -9,7 +9,8 @@
   4x no WiFi Connection
 
 */
-unsigned int ledPin = 0;
+extern Settings _settings;
+bool ledPin = 0;
 unsigned int ledTimer = 0;
 unsigned int repeatTime = 5000;
 unsigned int cycleTime = 250;
@@ -33,15 +34,15 @@ void notificationLED()
 
   if (ledState > 0)
   {
-    if (millis() > (cycleMillis + cycleTime) /*&& relaisOn != true*/)
+    if (millis() > (cycleMillis + cycleTime))
     {
-      if (ledPin == 0)
+      if (!ledPin)
       {
-        ledPin = 255; 
+        ledPin = true; 
       }
       else
       {
-        ledPin = 0;
+        ledPin = false;
         ledState--;
       }
       cycleMillis = millis();
@@ -50,29 +51,14 @@ void notificationLED()
         ledTimer = millis();
       }
     }
-/* make it later
-    if (millis() >= (cycleMillis + cycleTime) && relaisOn == true)
-    {
-       //ledPin = 127.0 + 128.0 * sin((millis() / (float)(cycleTime * 2)) * 2.0 * PI);
-       ledPin = (cos((millis() / (float)(cycleTime/4)) - PI)*0.5+0.5)*255;
 
-      if (ledPin == 254 && waveHelper == false)
-      {
-        waveHelper = true;
-      }
-      if (ledPin == 0 && waveHelper == true)
-      {
-        ledState--;
-        waveHelper = false;
-      }
-
-
-      if (ledState == 0)
-      {
-        ledTimer = millis();
-      }
-    }
-    */
   }
-  analogWrite(LED_PIN, 255 - ledPin);
+  if (!ledPin)
+  {
+    analogWrite(LED_PIN, 255);
+  } else
+  {
+    analogWrite(LED_PIN, 255-_settings.data.LEDBrightness);
+  }
+
 }
