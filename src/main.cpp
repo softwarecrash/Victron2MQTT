@@ -578,7 +578,7 @@ bool getJsonData()
       }
     }
     
-    Json["Device_connection"] = myve.veError ? "Disconnected" : "Connected";
+    Json["Device_connection"] = !myve.veError;
     Json["Remote_Control_State"] = remoteControlState;
   }
   return true;
