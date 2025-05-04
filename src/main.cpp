@@ -14,7 +14,7 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 
-//#include <WebSerialLite.h>
+// #include <WebSerialLite.h>
 #include <MycilaWebSerial.h>
 #include <SoftwareSerial.h>
 
@@ -127,8 +127,8 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
       notifyClients();
 
     break;
-    case WS_EVT_PING:
-      break;
+  case WS_EVT_PING:
+    break;
   case WS_EVT_DISCONNECT:
     writeLog("WebSocket client #%u disconnected\n", client->id());
     wsClient = nullptr;
@@ -165,7 +165,7 @@ bool remoteControl(bool sw)
   rtcData *RTCmem = rtcMemory.getData();
   RTCmem->remoteControlState = sw;
   rtcMemory.save();
-  if(_settings.data.keepRcState)
+  if (_settings.data.keepRcState)
   {
     _settings.data.rcState = sw;
     _settings.save();
@@ -202,17 +202,17 @@ void setup()
   }
   rtcMemory.save();
   _settings.load();
-  if(_settings.data.keepRcState)
+  if (_settings.data.keepRcState)
     remoteControlState = _settings.data.rcState;
   digitalWrite(MYPORT_TX, remoteControlState);
-  
+
   haAutoDiscTrigger = _settings.data.haDiscovery;
   WiFi.persistent(true); // fix wifi save bug
   veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX /*, MYPORT_TX, false*/);
   veSerial.flush();
   veSerial.enableRxGPIOPullUp(false);
   myve.callback(prozessData);
-  
+
   sprintf(mqttClientId, "%s-%06X", _settings.data.deviceName, ESP.getChipId());
 
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
@@ -413,20 +413,14 @@ void setup()
     server.addHandler(&ws);
 
     // WebSerial is accessible at "<IP Address>/webserial" in browser
-    //WebSerial.begin(&server);
     webSerial.begin(&server);
 
     server.begin();
-    //MDNS.addService("http", "tcp", 80);
-    //MDNS.update();
+    // MDNS.addService("http", "tcp", 80);
+    // MDNS.update();
 
     jsonESP["IP"] = WiFi.localIP();
     jsonESP["sw_version"] = SOFTWARE_VERSION;
-/*     jsonESP["Flash_Size"] = ESP.getFlashChipSize();
-    jsonESP["Sketch_Size"] = ESP.getSketchSize();
-    jsonESP["Free_Sketch_Space"] = ESP.getFreeSketchSpace();
-    jsonESP["Real_Flash_Size"] = ESP.getFlashChipRealSize(); */
-
     tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
     tempSens.onTemperatureChange(handleTemperatureChange);
   }
@@ -437,8 +431,8 @@ void setup()
 
 void loop()
 {
-MDNS.update();
-tempSens.update();
+  MDNS.update();
+  tempSens.update();
   if (Update.isRunning())
   {
     workerCanRun = false;
@@ -451,7 +445,7 @@ tempSens.update();
     if (WiFi.status() == WL_CONNECTED)
     {                      // No use going to next step unless WIFI is up and running.
       ws.cleanupClients(); // clean unused client connections
-      //MDNS.update();
+      // MDNS.update();
       if (millis() - mqtttimer > (_settings.data.mqttRefresh * 1000) || mqtttimer == 0)
       {
         writeLog("<MQTT> Data Send...");
@@ -495,10 +489,8 @@ bool getJsonData()
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
   jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  //jsonESP["HEAP_Fragmentation"] = ESP.getHeapFragmentation();
   jsonESP["json_space"] = Json.capacity() - Json.memoryUsage();
   jsonESP["WS_Clients"] = ws.count();
-  //jsonESP["Free_BlockSize"] = ESP.getMaxFreeBlockSize();
   jsonESP["Runtime"] = millis() / 1000;
   writeLog("VE data: %d:%d:%d", myve.veEnd, myve.veErrorCount, myve.veError);
   for (size_t i = 0; i < myve.veEnd; i++)
@@ -511,100 +503,81 @@ bool getJsonData()
     }
     // writeLog("[%s:%s]",myve.veName[i], myve.veValue[i]);
     //  search for every Vevalue in the list and replace it with clear name
-    for (size_t j = 0; j < sizeof(VePrettyData) / sizeof(VePrettyData[0]); j++)
-    {
-      if (strcmp(VePrettyData[j][0], myve.veName[i]) == 0) // search the real descriptor in the array
-      {
-        // check if we have a data operator
-        if (strlen(VePrettyData[j][2]) > 0 && strcmp(VePrettyData[j][2], "0") != 0)
-        {
-          Json[FPSTR(VePrettyData[j][1])] = (int)((atof(myve.veValue[i]) / atoi(VePrettyData[j][2])) * 100 + 0.5) / 100.0;
-        }
-        else if (strcmp(VePrettyData[j][2], "0") == 0)
-        {
-          Json[FPSTR(VePrettyData[j][1])] = atoi(myve.veValue[i]);
-        }
-        else
-        {
-          Json[FPSTR(VePrettyData[j][1])] = myve.veValue[i];
-        }
+    for (size_t j = 0; j < VePrettyDataSize; j++) {
+      VePrettyEntry entry;
+      memcpy_P(&entry, &VePrettyData[j], sizeof(entry));
+    
+      char key[16];
+      strcpy_P(key, entry.key);
+    
+      if (strcmp(key, myve.veName[i]) == 0) {
+        char name[32];
+        char op[8];
+        strcpy_P(name, entry.name);
+        strcpy_P(op, entry.op);
 
-        // if the Name Device_Model, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Device_model") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceList) / sizeof(VeDirectDeviceList[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceList[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceList[k][1]);
+        if (strlen(op) > 0 && strcmp(op, "0") != 0) {
+          Json[FPSTR(entry.name)] = (int)((atof(myve.veValue[i]) / atoi(op)) * 100 + 0.5) / 100.0;
+        } else if (strcmp(op, "0") == 0) {
+          Json[FPSTR(entry.name)] = atoi(myve.veValue[i]);
+        } else {
+          Json[FPSTR(entry.name)] = myve.veValue[i];
+        }
+        if (strcmp(name, "Device_model") == 0) {
+          uint16_t deviceID = strtol(myve.veValue[i], nullptr, 16);
+          VeDeviceEntry devEntry;
+          size_t left = 0, right = VeDeviceListSize;
+          const char* modelName = nullptr;
+    
+          while (left < right) {
+            size_t mid = (left + right) / 2;
+            memcpy_P(&devEntry, &VeDeviceList[mid], sizeof(devEntry));
+            if (deviceID == devEntry.id) {
+              modelName = (const char*)pgm_read_ptr(&devEntry.name);
               break;
+            } else if (deviceID < devEntry.id) {
+              right = mid;
+            } else {
+              left = mid + 1;
+            }
+          }
+          if (modelName) {
+            Json[FPSTR(entry.name)] = FPSTR(modelName);
+          }
+        }
+        struct CodeMap {
+          const char* label;
+          const VeCodeEntry* table;
+          size_t size;
+        };
+    
+        const CodeMap maps[] = {
+          {"Alarm_code", VeDirectDeviceCodeAR, VeDirectDeviceCodeARSize},
+          {"Off_reason", VeDirectDeviceCodeOR, VeDirectDeviceCodeORSize},
+          {"Operation_state", VeDirectDeviceCodeCS, VeDirectDeviceCodeCSSize},
+          {"Current_error", VeDirectDeviceCodeERR, VeDirectDeviceCodeERRSize},
+          {"Tracker_operation_mode", VeDirectDeviceCodeMPPT, VeDirectDeviceCodeMPPTSize},
+        };
+    
+        for (const auto& map : maps) {
+          if (strcmp(name, map.label) == 0) {
+            for (size_t k = 0; k < map.size; k++) {
+              VeCodeEntry codeEntry;
+              memcpy_P(&codeEntry, &map.table[k], sizeof(codeEntry));
+    
+              char codeBuf[16];
+              strcpy_P(codeBuf, codeEntry.code);
+              if (strcmp(codeBuf, myve.veValue[i]) == 0) {
+                Json[FPSTR(entry.name)] = FPSTR(codeEntry.text);
+                break;
+              }
             }
           }
         }
-
-        // if the Name AR - Alarm_code, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Alarm_code") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeAR) / sizeof(VeDirectDeviceCodeAR[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeAR[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeAR[k][1]);
-              break;
-            }
-          }
-        }
-        // if the Name OR - Off_reason, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Off_reason") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeOR) / sizeof(VeDirectDeviceCodeOR[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeOR[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeOR[k][1]);
-              break;
-            }
-          }
-        }
-        // if the Name CS - Operation_state, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Operation_state") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeCS) / sizeof(VeDirectDeviceCodeCS[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeCS[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeCS[k][1]);
-              break;
-            }
-          }
-        }
-        // if the Name ERR - Current_error, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Current_error") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeERR) / sizeof(VeDirectDeviceCodeERR[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeERR[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeERR[k][1]);
-              break;
-            }
-          }
-        }
-        // if the Name MPPT - Tracker_operation_mode, search in the list for the device code
-        if (strcmp(VePrettyData[j][1], "Tracker_operation_mode") == 0)
-        {
-          for (size_t k = 0; k < sizeof(VeDirectDeviceCodeMPPT) / sizeof(VeDirectDeviceCodeMPPT[0]); k++)
-          {
-            if (strcmp(VeDirectDeviceCodeMPPT[k][0], myve.veValue[i]) == 0)
-            {
-              Json[FPSTR(VePrettyData[j][1])] = FPSTR(VeDirectDeviceCodeMPPT[k][1]);
-              break;
-            }
-          }
-        }
-        break; // if we have found and prozessed the data, break the loop
+        break;
       }
     }
+    
     Json["Device_connection"] = myve.veError ? "Disconnected" : "Connected";
     Json["Remote_Control_State"] = remoteControlState;
   }
@@ -676,19 +649,19 @@ void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
 {
   String messageTemp;
   // updateProgress = true; // stop servicing data
-//  if (!_settings.data.mqttJson)
- // {
+  //  if (!_settings.data.mqttJson)
+  // {
 
-    for (unsigned int i = 0; i < length; i++)
-    {
-      messageTemp += (char)payload[i];
-    }
- // }
- // else
- // {
- //   StaticJsonDocument<1024> mqttJsonAnswer;
- //   deserializeJson(mqttJsonAnswer, (const byte *)payload, length);
- // }
+  for (unsigned int i = 0; i < length; i++)
+  {
+    messageTemp += (char)payload[i];
+  }
+  // }
+  // else
+  // {
+  //   StaticJsonDocument<1024> mqttJsonAnswer;
+  //   deserializeJson(mqttJsonAnswer, (const byte *)payload, length);
+  // }
 
   if (strlen(_settings.data.mqttTriggerPath) > 0 && strcmp(top, _settings.data.mqttTriggerPath) == 0)
   {
@@ -794,11 +767,11 @@ bool sendHaDiscovery()
 void handleTemperatureChange(int deviceIndex, int32_t temperatureRAW)
 {
   float tempCels = tempSens.rawToCelsius(temperatureRAW);
-  if(tempCels <= -55 || tempCels >= 125)
-  return;
-  writeLog("<DS18x> DS18B20_%d  Celsius:%f", deviceIndex+1, tempCels);
+  if (tempCels <= -55 || tempCels >= 125)
+    return;
+  writeLog("<DS18x> DS18B20_%d  Celsius:%f", deviceIndex + 1, tempCels);
   char msgBuffer[8];
-  jsonESP["DS18B20_" + String(deviceIndex+1)] = dtostrf(tempCels, 4, 2, msgBuffer);
+  jsonESP["DS18B20_" + String(deviceIndex + 1)] = dtostrf(tempCels, 4, 2, msgBuffer);
 }
 
 void writeLog(const char *format, ...)
@@ -811,6 +784,6 @@ void writeLog(const char *format, ...)
   va_end(args);
 
   // write msg to the log
-   DBG_PRINTLN(msg);
-   DBG_WEBLN(msg);
+  DBG_PRINTLN(msg);
+  DBG_WEBLN(msg);
 }
