@@ -445,7 +445,7 @@ void loop()
     // Make sure wifi is in the right mode
     if (WiFi.status() == WL_CONNECTED)
     {                      // No use going to next step unless WIFI is up and running.
-      ws.cleanupClients(); // clean unused client connections
+      //ws.cleanupClients(); // clean unused client connections
       // MDNS.update();
       if (millis() - mqtttimer > (_settings.data.mqttRefresh * 1000) || mqtttimer == 0)
       {
