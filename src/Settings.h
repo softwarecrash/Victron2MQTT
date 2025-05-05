@@ -31,7 +31,7 @@ public:
     // bool debugmode;           // Debug-Mode
     bool keepRcState;
     bool rcState;
-    int LEDBrightness;         // brigthness of led
+    byte LEDBrightness;         // brigthness of led
   } data;
 
   void load()
