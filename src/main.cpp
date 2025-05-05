@@ -125,7 +125,6 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     writeLog("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     if (!dataProzessing /*&& wsClient != nullptr && wsClient->canSend()*/)
       notifyClients();
-
     break;
   case WS_EVT_PING:
     break;
@@ -138,6 +137,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     handleWebSocketMessage(arg, data, len);
     break;
   case WS_EVT_PONG:
+    break;
   case WS_EVT_ERROR:
     wsClient = nullptr;
     ws.cleanupClients();
@@ -179,7 +179,7 @@ void setup()
 {
   DBG_BEGIN(DBG_BAUD);
   pinMode(LED_PIN, OUTPUT);
-  analogWrite(LED_PIN, 255-_settings.data.LEDBrightness);
+  analogWrite(LED_PIN, 255 - _settings.data.LEDBrightness);
   pinMode(MYPORT_TX, OUTPUT);
 
   if (!rtcMemory.begin())
@@ -444,9 +444,9 @@ void loop()
 
     // Make sure wifi is in the right mode
     if (WiFi.status() == WL_CONNECTED)
-    {                      // No use going to next step unless WIFI is up and running.
-      //ws.cleanupClients(); // clean unused client connections
-      // MDNS.update();
+    { // No use going to next step unless WIFI is up and running.
+      // ws.cleanupClients(); // clean unused client connections
+      //  MDNS.update();
       if (millis() - mqtttimer > (_settings.data.mqttRefresh * 1000) || mqtttimer == 0)
       {
         writeLog("<MQTT> Data Send...");
@@ -504,71 +504,91 @@ bool getJsonData()
     }
     // writeLog("[%s:%s]",myve.veName[i], myve.veValue[i]);
     //  search for every Vevalue in the list and replace it with clear name
-    for (size_t j = 0; j < VePrettyDataSize; j++) {
+    for (size_t j = 0; j < VePrettyDataSize; j++)
+    {
       VePrettyEntry entry;
       memcpy_P(&entry, &VePrettyData[j], sizeof(entry));
-    
+
       char key[16];
       strcpy_P(key, entry.key);
-    
-      if (strcmp(key, myve.veName[i]) == 0) {
+
+      if (strcmp(key, myve.veName[i]) == 0)
+      {
         char name[32];
         char op[8];
         strcpy_P(name, entry.name);
         strcpy_P(op, entry.op);
 
-        if (strlen(op) > 0 && strcmp(op, "0") != 0) {
+        if (strlen(op) > 0 && strcmp(op, "0") != 0)
+        {
           Json[FPSTR(entry.name)] = (int)((atof(myve.veValue[i]) / atoi(op)) * 100 + 0.5) / 100.0;
-        } else if (strcmp(op, "0") == 0) {
+        }
+        else if (strcmp(op, "0") == 0)
+        {
           Json[FPSTR(entry.name)] = atoi(myve.veValue[i]);
-        } else {
+        }
+        else
+        {
           Json[FPSTR(entry.name)] = myve.veValue[i];
         }
-        if (strcmp(name, "Device_model") == 0) {
+        if (strcmp(name, "Device_model") == 0)
+        {
           uint16_t deviceID = strtol(myve.veValue[i], nullptr, 16);
           VeDeviceEntry devEntry;
           size_t left = 0, right = VeDeviceListSize;
-          const char* modelName = nullptr;
-    
-          while (left < right) {
+          const char *modelName = nullptr;
+
+          while (left < right)
+          {
             size_t mid = (left + right) / 2;
             memcpy_P(&devEntry, &VeDeviceList[mid], sizeof(devEntry));
-            if (deviceID == devEntry.id) {
-              modelName = (const char*)pgm_read_ptr(&devEntry.name);
+            if (deviceID == devEntry.id)
+            {
+              modelName = (const char *)pgm_read_ptr(&devEntry.name);
               break;
-            } else if (deviceID < devEntry.id) {
+            }
+            else if (deviceID < devEntry.id)
+            {
               right = mid;
-            } else {
+            }
+            else
+            {
               left = mid + 1;
             }
           }
-          if (modelName) {
+          if (modelName)
+          {
             Json[FPSTR(entry.name)] = FPSTR(modelName);
           }
         }
-        struct CodeMap {
-          const char* label;
-          const VeCodeEntry* table;
+        struct CodeMap
+        {
+          const char *label;
+          const VeCodeEntry *table;
           size_t size;
         };
-    
+
         const CodeMap maps[] = {
-          {"Alarm_code", VeDirectDeviceCodeAR, VeDirectDeviceCodeARSize},
-          {"Off_reason", VeDirectDeviceCodeOR, VeDirectDeviceCodeORSize},
-          {"Operation_state", VeDirectDeviceCodeCS, VeDirectDeviceCodeCSSize},
-          {"Current_error", VeDirectDeviceCodeERR, VeDirectDeviceCodeERRSize},
-          {"Tracker_operation_mode", VeDirectDeviceCodeMPPT, VeDirectDeviceCodeMPPTSize},
+            {"Alarm_code", VeDirectDeviceCodeAR, VeDirectDeviceCodeARSize},
+            {"Off_reason", VeDirectDeviceCodeOR, VeDirectDeviceCodeORSize},
+            {"Operation_state", VeDirectDeviceCodeCS, VeDirectDeviceCodeCSSize},
+            {"Current_error", VeDirectDeviceCodeERR, VeDirectDeviceCodeERRSize},
+            {"Tracker_operation_mode", VeDirectDeviceCodeMPPT, VeDirectDeviceCodeMPPTSize},
         };
-    
-        for (const auto& map : maps) {
-          if (strcmp(name, map.label) == 0) {
-            for (size_t k = 0; k < map.size; k++) {
+
+        for (const auto &map : maps)
+        {
+          if (strcmp(name, map.label) == 0)
+          {
+            for (size_t k = 0; k < map.size; k++)
+            {
               VeCodeEntry codeEntry;
               memcpy_P(&codeEntry, &map.table[k], sizeof(codeEntry));
-    
+
               char codeBuf[16];
               strcpy_P(codeBuf, codeEntry.code);
-              if (strcmp(codeBuf, myve.veValue[i]) == 0) {
+              if (strcmp(codeBuf, myve.veValue[i]) == 0)
+              {
                 Json[FPSTR(entry.name)] = FPSTR(codeEntry.text);
                 break;
               }
@@ -578,7 +598,7 @@ bool getJsonData()
         break;
       }
     }
-    
+
     Json["Device_connection"] = !myve.veError;
     Json["Remote_Control_State"] = remoteControlState;
   }
