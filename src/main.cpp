@@ -177,6 +177,7 @@ bool remoteControl(bool sw)
 
 void setup()
 {
+  _settings.load();
   DBG_BEGIN(DBG_BAUD);
   pinMode(LED_PIN, OUTPUT);
   analogWrite(LED_PIN, 255 - _settings.data.LEDBrightness);
@@ -201,7 +202,6 @@ void setup()
     }
   }
   rtcMemory.save();
-  _settings.load();
   if (_settings.data.keepRcState)
     remoteControlState = _settings.data.rcState;
   digitalWrite(MYPORT_TX, remoteControlState);
