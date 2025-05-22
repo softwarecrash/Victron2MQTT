@@ -150,6 +150,7 @@ const char name_A347[] PROGMEM = "Phoenix Smart IP43 Charger 24|16 (3)";
 const char name_A381[] PROGMEM = "BMV-712 Smart";
 const char name_A382[] PROGMEM = "BMV-710H Smart";
 const char name_A383[] PROGMEM = "BMV-712 Smart Rev2";
+const char name_C038[] PROGMEM = "SmartShunt 300A/50mV";
 const char name_A389[] PROGMEM = "SmartShunt 500A/50mV";
 const char name_A38A[] PROGMEM = "SmartShunt 1000A/50mV";
 const char name_A38B[] PROGMEM = "SmartShunt 2000A/50mV";
@@ -310,6 +311,7 @@ const VeDeviceEntry VeDeviceList[] PROGMEM = {
   {0xA38B, name_A38B},
   {0xA3F0, name_A3F0},
   {0xC030, name_C030},
+  {0xC038, name_C038},
 };
 
 const size_t VeDeviceListSize = sizeof(VeDeviceList) / sizeof(VeDeviceList[0]);
