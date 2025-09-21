@@ -37,6 +37,8 @@
 #define DBG_BEGIN(...) DBG.begin(__VA_ARGS__)
 #define DBG_PRINTLN(...) DBG.println(__VA_ARGS__)
 
+uint32_t lastWifiOK = 0;
+
 typedef struct {
   byte bootcount;
   bool remoteControlState;
@@ -74,3 +76,5 @@ bool remoteControl(bool sw);
  *
  */
 void writeLog(const char* format, ...);
+
+void checkWiFiAndMaybeReboot();

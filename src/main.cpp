@@ -88,14 +88,17 @@ void notifyClients()
     AsyncWebSocketMessageBuffer *buffer = ws.makeBuffer(len);
     if (buffer)
     {
-      serializeJson(Json, (char *)buffer->get(), len + 1);
-      wsClient->text(buffer);
+/*       serializeJson(Json, (char *)buffer->get(), len + 1);
+      wsClient->text(buffer); */
+      String s; s.reserve(measureJson(Json) + 1);
+      serializeJson(Json, s);
+      wsClient->text(s);
     }
     writeLog("Data sent to WebSocket");
   }
 }
 
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
+/* void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
 
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
@@ -113,6 +116,19 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         remoteControl(false);
       }
     }
+  }
+} */
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo *)arg;
+  if (!(info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)) return;
+  std::unique_ptr<char[]> buf(new char[len + 1]);
+  memcpy(buf.get(), data, len);
+  buf[len] = '\0';
+
+  String msg(buf.get());
+  if (msg != "A9") {
+    if (msg == "remotecontrol_on")  remoteControl(true);
+    else if (msg == "remotecontrol_off") remoteControl(false);
   }
 }
 
@@ -173,6 +189,18 @@ bool remoteControl(bool sw)
   remoteControlState = sw;
   mqtttimer = 0;
   return remoteControlState;
+}
+
+void checkWiFiAndMaybeReboot() {
+  if (WiFi.status() == WL_CONNECTED) {
+    lastWifiOK = millis();
+    return;
+  }
+
+  if ((uint32_t)(millis() - lastWifiOK) >= 300000UL) {
+    delay(100);
+    ESP.restart();
+  }
 }
 
 void setup()
@@ -428,6 +456,7 @@ void setup()
   analogWrite(LED_PIN, 255);
   RTCmem->bootcount = 0;
   rtcMemory.save();
+  lastWifiOK = millis();
 }
 
 void loop()
@@ -457,6 +486,7 @@ void loop()
       mqttclient.loop(); // Check if we have something to read from MQTT
     }
     notificationLED(); // notification LED routine
+    checkWiFiAndMaybeReboot();
 
     if ((haDiscTrigger || _settings.data.haDiscovery) && measureJson(Json) > jsonSize)
     {
