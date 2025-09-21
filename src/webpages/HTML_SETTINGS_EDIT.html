@@ -9,6 +9,26 @@
             maxlength="35" value="%pre_device_name%" onkeyup="this.value=this.value.replace(/\s+/g,'_');">
     </div>
     <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="staticipdesc">Static IP (leave empty for DHCP)</span>
+        <input type="text" class="form-control" aria-describedby="staticipdesc" id="staticip" name="post_staticIP"
+            maxlength="15" value="%pre_static_ip%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="staticgwdesc">Static Gateway (leave empty for DHCP)</span>
+        <input type="text" class="form-control" aria-describedby="staticgwdesc" id="staticgw" name="post_staticGW"
+            maxlength="15" value="%pre_static_gw%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="staticsndesc">Static Subnet (leave empty for DHCP)</span>
+        <input type="text" class="form-control" aria-describedby="staticsndesc" id="staticsn" name="post_staticSN"
+            maxlength="15" value="%pre_static_sn%">
+    </div>
+    <div class="input-group mb-2">
+        <span class="input-group-text w-50" id="staticdnsdesc">Static DNS (leave empty for DHCP)</span>
+        <input type="text" class="form-control" aria-describedby="staticdnsdesc" id="staticdns" name="post_staticDNS"
+            maxlength="15" value="%pre_static_dns%">
+    </div>
+    <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqttserverdesc">MQTT Server</span>
         <input type="text" class="form-control" aria-describedby="mqttserverdesc" id="mqttserver" name="post_mqttServer"
             maxlength="35" value="%pre_mqtt_server%">
