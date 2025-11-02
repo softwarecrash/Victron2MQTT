@@ -6,89 +6,85 @@
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="devicenamedesc">Device Name</span>
         <input type="text" class="form-control" aria-describedby="devicenamedesc" id="devicename" name="post_deviceName"
-            maxlength="35" value="%pre_device_name%" onkeyup="this.value=this.value.replace(/\s+/g,'_');">
+            maxlength="35" onkeyup="this.value=this.value.replace(/\s+/g,'_');">
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="staticipdesc">Static IP (leave empty for DHCP)</span>
         <input type="text" class="form-control" aria-describedby="staticipdesc" id="staticip" name="post_staticIP"
-            maxlength="15" value="%pre_static_ip%">
+            maxlength="15" >
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="staticgwdesc">Static Gateway (leave empty for DHCP)</span>
         <input type="text" class="form-control" aria-describedby="staticgwdesc" id="staticgw" name="post_staticGW"
-            maxlength="15" value="%pre_static_gw%">
+            maxlength="15" >
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="staticsndesc">Static Subnet (leave empty for DHCP)</span>
         <input type="text" class="form-control" aria-describedby="staticsndesc" id="staticsn" name="post_staticSN"
-            maxlength="15" value="%pre_static_sn%">
+            maxlength="15" >
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="staticdnsdesc">Static DNS (leave empty for DHCP)</span>
         <input type="text" class="form-control" aria-describedby="staticdnsdesc" id="staticdns" name="post_staticDNS"
-            maxlength="15" value="%pre_static_dns%">
+            maxlength="15" >
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqttserverdesc">MQTT Server</span>
-        <input type="text" class="form-control" aria-describedby="mqttserverdesc" id="mqttserver" name="post_mqttServer"
-            maxlength="35" value="%pre_mqtt_server%">
+        <input type="text" class="form-control" aria-describedby="mqttserverdesc" id="mqttserver" name="post_mqttServer">
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqttportdesc">MQTT Port</span>
-        <input type="text" class="form-control" aria-describedby="mqttportdesc" id="mqttport" name="post_mqttPort"
-            maxlength="5" value="%pre_mqtt_port%">
+        <input type="text" class="form-control" aria-describedby="mqttportdesc" id="mqttport" name="post_mqttPort">
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqttuserdesc">MQTT User</span>
-        <input type="text" class="form-control" aria-describedby="mqttuserdesc" id="mqttuser" name="post_mqttUser"
-            maxlength="35" value="%pre_mqtt_user%">
+        <input type="text" class="form-control" aria-describedby="mqttuserdesc" id="mqttuser" name="post_mqttUser">
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqttpassworddesc">MQTT Password</span>
-        <input type="password" class="form-control" aria-describedby="mqttpassworddesc" id="mqttpassword" maxlength="35"
-            name="post_mqttPassword" value="%pre_mqtt_pass%">
+        <input type="password" class="form-control" aria-describedby="mqttpassworddesc" id="mqttpassword" name="post_mqttPassword">
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqtttopicdesc">MQTT Topic</span>
         <input type="text" class="form-control" aria-describedby="mqtttopicdesc" id="mqtttopic" name="post_mqttTopic"
-            maxlength="35" value="%pre_mqtt_topic%" onkeyup="this.value=this.value.replace(/\s+/g,'_');">
+            onkeyup="this.value=this.value.replace(/\s+/g,'_');">
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqttrefreshdesc">MQTT Refresh (sec)</span>
         <input type="text" class="form-control" aria-describedby="mqttrefreshdesc" id="mqttrefresh" maxlength="3" min="3"
-            name="post_mqttRefresh" value="%pre_mqtt_refresh%">
+            name="post_mqttRefresh">
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqtttriggerdesc">MQTT Data Trigger Path</span>
         <input type="text" class="form-control" aria-describedby="mqtttrigerdesc" id="mqtttrigger" maxlength="80"
-            name="post_mqtttrigger" value="%pre_mqtt_mqtttrigger%" onkeyup="this.value=this.value.replace(/\s+/g,'_');">
+            name="post_mqtttrigger" onkeyup="this.value=this.value.replace(/\s+/g,'_');">
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqttjsondesc">MQTT Json Style</span>
         <div class="form-switch form-control mqtt-settings-switch" style="width:50%%; text-align: center;">
             <input type="checkbox" class="form-check-input form control" aria-describedby="mqttjsondesc" role="switch"
-                id="mqttjson" name="post_mqttjson" value="true" %pre_mqtt_json%>
+                id="mqttjson" name="post_mqttjson" value="true">
         </div>
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="mqtthadisc">HA Discovery</span>
         <div class="form-switch form-control mqtt-settings-switch" style="width:50%%; text-align: center;">
             <input type="checkbox" class="form-check-input form control" aria-describedby="mqtthadisc" role="switch"
-                id="post_hadiscovery" name="post_hadiscovery" value="true" %pre_hadiscovery% onclick='haSwitch()'>
+                id="post_hadiscovery" name="post_hadiscovery" value="true" onclick='haSwitch()'>
         </div>
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="webuicolormode">WebUI Dark Mode</span>
         <div class="form-switch form-control" style="width:50%%; text-align: center;">
             <input type="checkbox" class="form-check-input form control" aria-describedby="webuicolormode" role="switch"
-                id="post_webuicolormode" name="post_webuicolormode" value="true" %pre_webuidarkmode%>
+                id="post_webuicolormode" name="post_webuicolormode" value="true">
         </div>
     </div>
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="keeprcstate">keep RC State</span>
         <div class="form-switch form-control" style="width:50%%; text-align: center;">
             <input type="checkbox" class="form-check-input form control" aria-describedby="keeprcstate" role="switch"
-                id="post_keeprcstate" name="post_keeprcstate" value="true" %pre_keeprcstate%>
+                id="post_keeprcstate" name="post_keeprcstate" value="true">
         </div>
     </div>
 
@@ -96,18 +92,9 @@
         <span class="input-group-text w-50" id="led">LED brightness</span>
         <div class="form-switch form-control" style="width:50%%; text-align: center;">
             <input type="range" class="form-range" aria-describedby="led"
-                id="post_led" name="post_led" value="%pre_led%" min="0" max="255">
+                id="post_led" name="post_led" min="0" max="255">
         </div>
     </div>
-    <!--
-    <div class="input-group mb-2">
-        <span class="input-group-text w-50" id="debugmode">DEBUG (for testing purposes)</span>
-        <div class="form-switch form-control" style="width:50%%; text-align: center;">
-            <input type="checkbox" class="form-check-input form control" aria-describedby="debugmode" role="switch"
-                id="post_debugmode" name="post_debugmode" value="true" %pre_debugmode%>
-        </div>
-    </div>
-    -->
     <div class="input-group mb-2">
         <span class="input-group-text w-50" id="httpUserdesc">HTTP Username</span>
         <input type="text" class="form-control" aria-describedby="httpUserdesc" id="httpUser" name="post_httpUser" maxlength="40"
@@ -136,6 +123,46 @@
         }
         document.getElementById('mqttjson').disabled = document.getElementById('post_hadiscovery').checked;
     }
+
+  async function loadSettings() {
+    try {
+      const res = await fetch('/api/settings', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const s = await res.json();
+
+      document.getElementById('devicename').value   = s.deviceName || '';
+      document.getElementById('staticip').value     = s.staticIP   || '';
+      document.getElementById('staticgw').value     = s.staticGW   || '';
+      document.getElementById('staticsn').value     = s.staticSN   || '';
+      document.getElementById('staticdns').value    = s.staticDNS  || '';
+
+      document.getElementById('mqttserver').value   = s.mqttServer || '';
+      document.getElementById('mqttport').value     = (s.mqttPort ?? 0);
+      document.getElementById('mqttuser').value     = s.mqttUser   || '';
+      document.getElementById('mqttpassword').value = s.mqttPassword || '';
+      document.getElementById('mqtttopic').value    = s.mqttTopic  || '';
+      document.getElementById('mqttrefresh').value  = (s.mqttRefresh ?? 300);
+      document.getElementById('mqtttrigger').value  = s.mqttTrigger || '';
+
+      document.getElementById('httpUser').value     = s.httpUser || '';
+      document.getElementById('httpPass').value     = s.httpPass || '';
+
+      document.getElementById('mqttjson').checked           = !!s.mqttJson;
+      document.getElementById('post_hadiscovery').checked   = !!s.haDiscovery;
+      document.getElementById('post_webuicolormode').checked= !!s.webUIdarkmode;
+      document.getElementById('post_keeprcstate').checked   = !!s.keepRcState;
+
+      document.getElementById('post_led').value = (s.LEDBrightness ?? 127);
+
+      haSwitch();
+    } catch (e) {
+      console.error('Failed to load settings:', e);
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    loadSettings();
+  });
+
 </script>
 
 %pre_foot_template%

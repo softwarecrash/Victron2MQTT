@@ -58,7 +58,7 @@ void notificationLED()
     analogWrite(LED_PIN, 255);
   } else
   {
-    analogWrite(LED_PIN, 255-_settings.data.LEDBrightness);
+    analogWrite(LED_PIN, 255 - _settings.LEDBrightness());
   }
 
 }

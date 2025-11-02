@@ -15,46 +15,44 @@ String htmlProcessor(const String &var)
     if (var == F("pre_esp01"))
         return (String(ESP01).c_str());
     if (var == F("pre_device_name"))
-        return (_settings.data.deviceName);
-    if (var == F("pre_mqtt_server"))
-        return (_settings.data.mqttServer);
+        return (_settings.deviceName());
+/*     if (var == F("pre_mqtt_server"))
+        return (_settings.mqttServer());
     if (var == F("pre_mqtt_port"))
-        return (String(_settings.data.mqttPort).c_str());
+        return (String(_settings.mqttPort()).c_str());
     if (var == F("pre_mqtt_user"))
-        return (_settings.data.mqttUser);
+        return (_settings.mqttUser());
     if (var == F("pre_mqtt_pass"))
-        return (_settings.data.mqttPassword);
+        return (_settings.mqttPassword());
     if (var == F("pre_mqtt_topic"))
-        return (_settings.data.mqttTopic);
+        return (_settings.mqttTopic());
     if (var == F("pre_mqtt_refresh"))
-        return (String(_settings.data.mqttRefresh).c_str());
+        return (String(_settings.mqttRefresh()).c_str());
     if (var == F("pre_mqtt_json"))
-        return (_settings.data.mqttJson ? "checked" : "");
-    if (var == F("pre_mqtt_mqtttrigger"))
-        return (_settings.data.mqttTriggerPath);
+        return (_settings.mqttJson() ? "checked" : "");
+    if (var == F("pre_mqtt_mqtttrigger")) 
+        return (_settings.mqttTriggerPath());*/
     if (var == F("pre_darkmode"))
-        return (_settings.data.webUIdarkmode ? "dark" : "light");
-    if (var == F("pre_webuidarkmode"))
-        return (_settings.data.webUIdarkmode ? "checked" : "");
+        return (_settings.webUIdarkmode() ? "dark" : "light");
+   /*  if (var == F("pre_webuidarkmode"))
+        return (_settings.webUIdarkmode() ? "checked" : "");
     if (var == F("pre_http_user"))
-        return (_settings.data.httpUser);
+        return (_settings.httpUser());
     if (var == F("pre_http_pass"))
-        return (_settings.data.httpPass);
+        return (_settings.httpPass());
     if (var == F("pre_hadiscovery"))
-        return (_settings.data.haDiscovery ? "checked" : "");
-    //if (var == F("pre_debugmode"))
-    //    return (_settings.data.debugmode ? "checked" : "");
+        return (_settings.haDiscovery() ? "checked" : "");
     if (var == F("pre_keeprcstate"))
-        return (_settings.data.keepRcState ? "checked" : "");
+        return (_settings.keepRcState() ? "checked" : "");
     if (var == F("pre_led"))
-        return (String(_settings.data.LEDBrightness));
+        return (String(_settings.LEDBrightness()));
     if (var == F("pre_static_ip"))
-        return (_settings.data.staticIP);
+        return (_settings.staticIP());
     if (var == F("pre_static_gw"))
-        return (_settings.data.staticGW);
+        return (_settings.staticGW());
     if (var == F("pre_static_sn"))
-        return (_settings.data.staticSN);
+        return (_settings.staticSN());
     if (var == F("pre_static_dns"))
-        return (_settings.data.staticDNS);
+        return (_settings.staticDNS()); */
     return String();
 }
