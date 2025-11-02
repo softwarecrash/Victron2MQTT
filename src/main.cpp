@@ -98,6 +98,15 @@ void notifyClients()
     return;
   _wsLast = now;
 
+
+
+/* static const char TEST_WS_JSON[] PROGMEM = R"json(
+{"ESP_Data":{"IP":"xxx.xxx.xxx.xxx","sw_version":"1.3.2","Wifi_RSSI":-71,"ESP_VCC":3.793,"Free_Heap":26280,"json_space":812,"WS_Clients":1,"Runtime":858},"Device_name":"Victron2MQTT","Device_model":"0XA443","Device_connection":true,"Remote_Control_State":false,"Serial_number":"xxxxxxx","Firmware_version_24":"126FF","Operation_state":"Off","Current_error":"No error","AC_out_current":0,"AC_out_volt":0,"total_kWh":153.38,"today_kWh":3.4,"Max_pow_today":1354,"Yesterday_kWh":5.51,"Max_pow_yesterday":1705,"Day":29,"Battery_current":0,"Panel_power":0,"Voltage":52.81}
+)json";
+deserializeJson(Json, FPSTR(TEST_WS_JSON)); */
+
+
+
   size_t len = measureJson(Json);
   if (len == 0)
     return;

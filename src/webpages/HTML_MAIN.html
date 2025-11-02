@@ -71,7 +71,6 @@ $( document ).ready(function() {
     initWebSocket();
     initButton();
 });
-    //window.addEventListener('load', onLoad);
     function initWebSocket() {
         console.log('Trying to open a WebSocket connection...');
         websocket = new WebSocket(gateway);
@@ -91,7 +90,21 @@ $( document ).ready(function() {
     function onError(event) {
         console.log('Connection lost');
     }
-    function onMessage(event) {
+
+//new normalize
+  function normalizePayload(d) {
+    if (!d || typeof d !== 'object') return d;
+    if (d.Load_current === undefined && d.AC_out_current !== undefined)
+      d.Load_current = d.AC_out_current;
+    if (d.Load_output_state === undefined && d.Operation_state !== undefined)
+      d.Load_output_state = d.Operation_state;
+    if (d.Relay === undefined && d.Operation_state !== undefined)
+      d.Relay = (String(d.Operation_state).toLowerCase() === 'on') ? 1 : 0;
+    return d;
+  }
+
+//old onMessage
+/*     function onMessage(event) {
         var data = JSON.parse(event.data);
 
         document.getElementById("devicename").innerHTML = data.Device_name == null ? 'No Connection' +'   '+ wifiSvg : data.Device_name  +'   '+ wifiSvg;
@@ -127,7 +140,121 @@ $( document ).ready(function() {
             document.getElementById("vcc_alert").style.display = 'none';
         }
         setWiFiSignal(data.ESP_Data.Wifi_RSSI);
+    } */
+function onMessage(event) {
+  function safe(obj, path, dflt) {
+    try {
+      return path.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
+    } catch (e) { return dflt; }
+  }
+  function setText(id, value, suffix) {
+    var el = document.getElementById(id);
+    if (!el) return false;
+    if (value === undefined || value === null || value === '' || Number.isNaN(value)) {
+      var row = el.closest ? el.closest('.dR') : null;
+      if (row) row.style.display = 'none';
+      return false;
     }
+    el.innerHTML = String(value) + (suffix || '');
+    var row = el.closest ? el.closest('.dR') : null;
+    if (row) row.style.display = '';
+    return true;
+  }
+  function showOrHide(id, show) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = show ? '' : 'none';
+  }
+  function normalizePayload(d) {
+    if (!d || typeof d !== 'object') return d;
+    if (d.Load_current === undefined && d.AC_out_current !== undefined)
+      d.Load_current = d.AC_out_current;
+    if (d.Load_output_state === undefined && d.Operation_state !== undefined)
+      d.Load_output_state = d.Operation_state;
+    if (d.Relay === undefined && d.Operation_state !== undefined) {
+      var s = String(d.Operation_state).toLowerCase();
+      d.Relay = (s === 'on' || s === 'active' || s === 'bulk' || s === 'inverting') ? 1 : 0;
+    }
+    var wsCount = (typeof wsClientsCount !== 'undefined' ? wsClientsCount : undefined);
+    if (wsCount !== undefined) {
+      if (!d.ESP_Data) d.ESP_Data = {};
+      if (d.ESP_Data.WS_Clients === undefined) d.ESP_Data.WS_Clients = wsCount;
+    }
+    return d;
+  }
+
+  // --- parse ---
+  var data;
+  try {
+    data = JSON.parse(event.data);
+  } catch (e) {
+    console.warn('WS JSON parse failed', e);
+    return;
+  }
+  data = normalizePayload(data);
+
+  var name = data.Device_name || 'No Connection';
+  var nameEl = document.getElementById('devicename');
+  if (nameEl) {
+    if (typeof wifiSvg !== 'undefined') nameEl.innerHTML = name + '   ' + wifiSvg;
+    else nameEl.innerHTML = name;
+  }
+
+  (function handleSoc() {
+    var bar = document.getElementById('SOCbar');
+    if (!bar) return;
+    if (data.SOC == null || Number.isNaN(Number(data.SOC))) {
+      if (bar.parentElement) bar.parentElement.style.display = 'none';
+      return;
+    }
+    var v = Math.max(0, Math.min(100, Number(data.SOC)));
+    if (bar.parentElement) bar.parentElement.style.display = '';
+    bar.innerHTML = v + '%';
+    if (window.$ && window.$('#SOCbar').width) {
+      $('#SOCbar').width(v + '%').attr('aria-valuenow', v);
+    } else {
+      bar.style.width = v + '%';
+      bar.setAttribute('aria-valuenow', String(v));
+    }
+  })();
+
+  setText('battvolt', data.Voltage, 'V ');
+  setText('battcurrent', data.Battery_current, 'A ');
+
+  var hasPVV = setText('pannelvolt', data.Panel_voltage, 'V ');
+  setText('pannelcurrent', data.Panel_power, 'W ');
+  if (!hasPVV) {
+    var pv = document.getElementById('pannelvolt');
+    if (pv) pv.innerHTML = '';
+  }
+
+  setText('loadcurrent', data.Load_current, 'A ');
+  setText('loadstate', data.Load_output_state);
+
+  if (!setText('relaystate', data.Relay)) {
+    var rel = document.getElementById('relaystate');
+    if (rel && rel.closest) {
+      var rrow = rel.closest('.dR');
+      if (rrow) rrow.style.display = 'none';
+    }
+  }
+
+  var rcEl = document.getElementById('remotecontrol');
+  if (rcEl) rcEl.checked = !!data.Remote_Control_State;
+
+  var vcc = safe(data, 'ESP_Data.ESP_VCC');
+  if (vcc !== undefined && vcc < 2.6) showOrHide('vcc_alert', true);
+  else showOrHide('vcc_alert', false);
+
+  var rssi = safe(data, 'ESP_Data.Wifi_RSSI');
+  if (rssi !== undefined && typeof setWiFiSignal === 'function') setWiFiSignal(rssi);
+
+  var rows = document.querySelectorAll ? document.querySelectorAll('.dR') : [];
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].innerHTML.indexOf('undefined') > -1) rows[i].style.display = 'none';
+  }
+}
+
+
     function initButton() {
         document.getElementById('remotecontrol').addEventListener('click', remoteControlSend);
     }
