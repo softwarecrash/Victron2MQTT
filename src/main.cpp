@@ -86,6 +86,26 @@ void saveConfigCallback()
   shouldSaveConfig = true;
 }
 
+bool checkAuth(AsyncWebServerRequest *request)
+{
+  // Prüfe, ob Benutzername in den Settings gesetzt ist
+  const char *user = _settings.get.httpUser();
+  const char *pass = _settings.get.httpPass();
+
+  // Nur prüfen, wenn ein Benutzername existiert
+  if (strlen(user) > 0)
+  {
+    if (!request->authenticate(user, pass))
+    {
+      request->requestAuthentication();
+      return false; // Anfrage hier stoppen
+    }
+  }
+
+  return true; // alles ok
+}
+
+
 // Throttle: max. alle 250 ms senden
 static uint32_t _wsLast = 0;
 
@@ -195,9 +215,9 @@ bool remoteControl(bool sw)
   rtcData *RTCmem = rtcMemory.getData();
   RTCmem->remoteControlState = sw;
   rtcMemory.save();
-  if (_settings.keepRcState())
+  if (_settings.get.keepRcState())
   {
-    _settings.setRcState(sw);
+    _settings.set.rcState(sw);
     _settings.save();
   }
   remoteControlState = sw;
@@ -237,7 +257,7 @@ void setup()
   _settings.load();
   DBG_BEGIN(DBG_BAUD);
   pinMode(LED_PIN, OUTPUT);
-  analogWrite(LED_PIN, 255 - _settings.LEDBrightness());
+  analogWrite(LED_PIN, 255 - _settings.get.LEDBrightness());
   pinMode(MYPORT_TX, OUTPUT);
 
   if (!rtcMemory.begin())
@@ -259,18 +279,18 @@ void setup()
     }
   }
   rtcMemory.save();
-  if (_settings.keepRcState())
-    remoteControlState = _settings.rcState();
+  if (_settings.get.keepRcState())
+    remoteControlState = _settings.get.rcState();
   digitalWrite(MYPORT_TX, remoteControlState);
 
-  haAutoDiscTrigger = _settings.haDiscovery();
+  haAutoDiscTrigger = _settings.get.haDiscovery();
   WiFi.persistent(true); // fix wifi save bug
   veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX /*, MYPORT_TX, false*/);
   veSerial.flush();
   veSerial.enableRxGPIOPullUp(false);
   myve.callback(prozessData);
 
-  sprintf(mqttClientId, "%s-%06X", _settings.deviceName(), ESP.getChipId());
+  sprintf(mqttClientId, "%s-%06X", _settings.get.deviceName(), ESP.getChipId());
 
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
   AsyncWiFiManagerParameter custom_mqtt_user("mqtt_user", "MQTT User", NULL, 32);
@@ -307,9 +327,9 @@ void setup()
   wm.setSaveConfigCallback(saveConfigCallback);
 
   IPAddress ip, gw, sn, dns;
-  if (ip.fromString(_settings.staticIP()) && gw.fromString(_settings.staticGW()) && sn.fromString(_settings.staticSN()))
+  if (ip.fromString(_settings.get.staticIP()) && gw.fromString(_settings.get.staticGW()) && sn.fromString(_settings.get.staticSN()))
   {
-    dns.fromString(_settings.staticDNS());
+    dns.fromString(_settings.get.staticDNS());
     wm.setSTAStaticIPConfig(ip, gw, sn, dns);
   }
 
@@ -318,25 +338,25 @@ void setup()
   // save settings if wifi setup is fire up
   if (shouldSaveConfig)
   {
-    _settings.setMqttServer(custom_mqtt_server.getValue());
-    _settings.setMqttUser(custom_mqtt_user.getValue());
-    _settings.setMqttPassword(custom_mqtt_pass.getValue());
-    _settings.setMqttTopic(custom_mqtt_topic.getValue());
-    _settings.setMqttPort(atoi(custom_mqtt_port.getValue()));
-    _settings.setMqttRefresh(atoi(custom_mqtt_refresh.getValue()));
-    _settings.setMqttTriggerPath(custom_mqtt_triggerpath.getValue());
-    _settings.setDeviceName(custom_device_name.getValue());
-    _settings.setStaticIP(custom_static_ip.getValue());
-    _settings.setStaticGW(custom_static_gw.getValue());
-    _settings.setStaticSN(custom_static_sn.getValue());
-    _settings.setStaticDNS(custom_static_dns.getValue());
+    _settings.set.mqttServer(custom_mqtt_server.getValue());
+    _settings.set.mqttUser(custom_mqtt_user.getValue());
+    _settings.set.mqttPassword(custom_mqtt_pass.getValue());
+    _settings.set.mqttTopic(custom_mqtt_topic.getValue());
+    _settings.set.mqttPort(atoi(custom_mqtt_port.getValue()));
+    _settings.set.mqttRefresh(atoi(custom_mqtt_refresh.getValue()));
+    _settings.set.mqttTriggerPath(custom_mqtt_triggerpath.getValue());
+    _settings.set.deviceName(custom_device_name.getValue());
+    _settings.set.staticIP(custom_static_ip.getValue());
+    _settings.set.staticGW(custom_static_gw.getValue());
+    _settings.set.staticSN(custom_static_sn.getValue());
+    _settings.set.staticDNS(custom_static_dns.getValue());
 
     _settings.save();
     ESP.restart();
   }
 
-  topic = _settings.mqttTopic();
-  mqttclient.setServer(_settings.mqttServer(), _settings.mqttPort());
+  topic = _settings.get.mqttTopic();
+  mqttclient.setServer(_settings.get.mqttServer(), _settings.get.mqttPort());
   mqttclient.setCallback(mqttCallback);
 
   if (res)
@@ -356,28 +376,28 @@ void setup()
   g_lastReconnectTry = 0; });
 
     // set the device name
-    MDNS.begin(_settings.deviceName());
+    MDNS.begin(_settings.get.deviceName());
     MDNS.addService("http", "tcp", 80);
-    WiFi.hostname(_settings.deviceName());
+    WiFi.hostname(_settings.get.deviceName());
 
-    Json["Device_name"] = _settings.data.deviceName;
+    Json["Device_name"] = _settings.get.deviceName();
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-      if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+      if (!checkAuth(request)) return;
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_MAIN, htmlProcessor);
       request->send(response); });
 
     server.on("/livejson", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-                if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+                if (!checkAuth(request)) return;
                 AsyncResponseStream *response = request->beginResponseStream("application/json");
                 serializeJson(Json, *response);
                 request->send(response); });
 
     server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-                if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+                if (!checkAuth(request)) return;
                 AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_REBOOT, htmlProcessor);
                 request->send(response);
                 restartNow = true;
@@ -385,13 +405,13 @@ void setup()
 
     server.on("/confirmreset", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-      if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+      if (!checkAuth(request)) return;
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_CONFIRM_RESET, htmlProcessor);
       request->send(response); });
 
     server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-                if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+                if (!checkAuth(request)) return;
                 AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Device is Erasing...");
                 response->addHeader("Refresh", "15; url=/");
                 response->addHeader("Connection", "close");
@@ -403,7 +423,7 @@ void setup()
 
     server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-      if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+      if (!checkAuth(request)) return;
     String message;
     if (request->hasParam("ha")) {
       haDiscTrigger = true;
@@ -416,19 +436,25 @@ void setup()
 
     server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-      if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+      if (!checkAuth(request)) return;
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_SETTINGS, htmlProcessor);
+      request->send(response); });
+
+    server.on("/backuprestore", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+      if (!checkAuth(request)) return;
+      AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_BACKUPRESTORE, htmlProcessor);
       request->send(response); });
 
     server.on("/settingsedit", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-      if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+      if (!checkAuth(request)) return;
       AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", HTML_SETTINGS_EDIT, htmlProcessor);
       request->send(response); });
 
     server.on("/api/settings", HTTP_GET, [](AsyncWebServerRequest *request)
               {
-      if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+      if (!checkAuth(request)) return;
 
   AsyncResponseStream* res = request->beginResponseStream("application/json");
   res->addHeader("Cache-Control", "no-store");
@@ -436,56 +462,56 @@ void setup()
 
   JsonDocument doc;
 
-  doc["deviceName"]    = _settings.deviceName();
+  doc["deviceName"]    = _settings.get.deviceName();
 
-  doc["staticIP"]      = _settings.staticIP();
-  doc["staticGW"]      = _settings.staticGW();
-  doc["staticSN"]      = _settings.staticSN();
-  doc["staticDNS"]     = _settings.staticDNS();
+  doc["staticIP"]      = _settings.get.staticIP();
+  doc["staticGW"]      = _settings.get.staticGW();
+  doc["staticSN"]      = _settings.get.staticSN();
+  doc["staticDNS"]     = _settings.get.staticDNS();
 
-  doc["mqttServer"]    = _settings.mqttServer();
-  doc["mqttPort"]      = _settings.mqttPort();
-  doc["mqttUser"]      = _settings.mqttUser();
-  doc["mqttPassword"]  = _settings.mqttPassword();
-  doc["mqttTopic"]     = _settings.mqttTopic();
-  doc["mqttRefresh"]   = _settings.mqttRefresh();
-  doc["mqttTrigger"]   = _settings.mqttTriggerPath();
-  doc["mqttJson"]      = _settings.mqttJson();
+  doc["mqttServer"]    = _settings.get.mqttServer();
+  doc["mqttPort"]      = _settings.get.mqttPort();
+  doc["mqttUser"]      = _settings.get.mqttUser();
+  doc["mqttPassword"]  = _settings.get.mqttPassword();
+  doc["mqttTopic"]     = _settings.get.mqttTopic();
+  doc["mqttRefresh"]   = _settings.get.mqttRefresh();
+  doc["mqttTrigger"]   = _settings.get.mqttTriggerPath();
+  doc["mqttJson"]      = _settings.get.mqttJson();
 
-  doc["haDiscovery"]   = _settings.haDiscovery();
-  doc["webUIdarkmode"] = _settings.webUIdarkmode();
-  doc["keepRcState"]   = _settings.keepRcState();
-  doc["rcState"]       = _settings.rcState();
-  doc["LEDBrightness"] = _settings.LEDBrightness();
+  doc["haDiscovery"]   = _settings.get.haDiscovery();
+  doc["webUIdarkmode"] = _settings.get.webUIdarkmode();
+  doc["keepRcState"]   = _settings.get.keepRcState();
+  doc["rcState"]       = _settings.get.rcState();
+  doc["LEDBrightness"] = _settings.get.LEDBrightness();
 
-  doc["httpUser"]      = _settings.httpUser();
-  doc["httpPass"]      = _settings.httpPass();
+  doc["httpUser"]      = _settings.get.httpUser();
+  doc["httpPass"]      = _settings.get.httpPass();
 
   serializeJson(doc, *res);
   request->send(res); });
 
     server.on("/settingssave", HTTP_POST, [](AsyncWebServerRequest *request)
               {
-                if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
-                  _settings.setMqttServer(request->arg("post_mqttServer"));
-                  _settings.setMqttPort(request->arg("post_mqttPort").toInt());
-                  _settings.setMqttUser(request->arg("post_mqttUser"));
-                  _settings.setMqttPassword(request->arg("post_mqttPassword"));
-                  _settings.setMqttTopic(request->arg("post_mqttTopic"));
-                  _settings.setMqttRefresh(request->arg("post_mqttRefresh").toInt());
-                  _settings.setDeviceName(request->arg("post_deviceName"));
-                  _settings.setMqttJson(request->arg("post_mqttjson") == "true");
-                  _settings.setStaticIP(request->arg("post_staticIP"));
-                  _settings.setStaticGW(request->arg("post_staticGW"));
-                  _settings.setStaticSN(request->arg("post_staticSN"));
-                  _settings.setStaticDNS(request->arg("post_staticDNS"));
-                  _settings.setMqttTriggerPath(request->arg("post_mqtttrigger"));
-                  _settings.setWebUIdarkmode(request->arg("post_webuicolormode") == "true");
-                  _settings.setHttpUser(request->arg("post_httpUser"));
-                  _settings.setHttpPass(request->arg("post_httpPass"));
-                  _settings.setHaDiscovery(request->arg("post_hadiscovery") == "true");
-                  _settings.setKeepRcState(request->arg("post_keeprcstate") == "true");
-                  _settings.setLEDBrightness(request->arg("post_led").toInt());
+                if (!checkAuth(request)) return;
+                  _settings.set.mqttServer(request->arg("post_mqttServer"));
+                  _settings.set.mqttPort(request->arg("post_mqttPort").toInt());
+                  _settings.set.mqttUser(request->arg("post_mqttUser"));
+                  _settings.set.mqttPassword(request->arg("post_mqttPassword"));
+                  _settings.set.mqttTopic(request->arg("post_mqttTopic"));
+                  _settings.set.mqttRefresh(request->arg("post_mqttRefresh").toInt());
+                  _settings.set.deviceName(request->arg("post_deviceName"));
+                  _settings.set.mqttJson(request->arg("post_mqttjson") == "true");
+                  _settings.set.staticIP(request->arg("post_staticIP"));
+                  _settings.set.staticGW(request->arg("post_staticGW"));
+                  _settings.set.staticSN(request->arg("post_staticSN"));
+                  _settings.set.staticDNS(request->arg("post_staticDNS"));
+                  _settings.set.mqttTriggerPath(request->arg("post_mqtttrigger"));
+                  _settings.set.webUIdarkmode(request->arg("post_webuicolormode") == "true");
+                  _settings.set.httpUser(request->arg("post_httpUser"));
+                  _settings.set.httpPass(request->arg("post_httpPass"));
+                  _settings.set.haDiscovery(request->arg("post_hadiscovery") == "true");
+                  _settings.set.keepRcState(request->arg("post_keeprcstate") == "true");
+                  _settings.set.LEDBrightness(request->arg("post_led").toInt());
                 _settings.save();
                 request->redirect("/reboot"); });
 
@@ -495,7 +521,7 @@ void setup()
     //https://gist.github.com/JMishou/60cb762047b735685e8a09cd2eb42a60
     // the request handler is triggered after the upload has finished... 
     // create the response, add header, and send response
-    if(strlen(_settings.httpUser()) > 0 && !request->authenticate(_settings.httpUser(), _settings.httpPass())) return request->requestAuthentication();
+    if (!checkAuth(request)) return;
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", (Update.hasError())?"FAIL":"OK");
     response->addHeader("Connection", "close");
     response->addHeader("Access-Control-Allow-Origin", "*");
@@ -539,6 +565,91 @@ void setup()
           }
         });
 
+// === /api/settings/backup (GET) ===
+server.on("/api/settings/backup", HTTP_GET, [](AsyncWebServerRequest *request)
+{
+  if (!checkAuth(request)) return;
+
+  bool pretty = false;
+  if (request->hasParam("pretty")) {
+    const String v = request->getParam("pretty")->value();
+    pretty = (v == "1" || v == "true" || v == "yes");
+  }
+
+  const String payload = _settings.backup(pretty);
+  request->send(200, "application/json; charset=utf-8", payload);
+});
+
+// === /api/settings/restore (POST) ===
+// Body = JSON (Backup-Inhalt) – Antwort wird NUR in onBody gesendet.
+server.on(
+  "/api/settings/restore",
+  HTTP_POST,
+  // onRequest: KEINE Antwort hier! Nur Auth prüfen und return.
+  [](AsyncWebServerRequest *request) {
+    if (!checkAuth(request)) return;
+    // nichts senden; wir antworten in onBody
+  },
+  // onUpload: nicht genutzt
+  NULL,
+  // onBody: JSON sammeln, am Ende verarbeiten und antworten
+  [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+  {
+    if (!checkAuth(request)) return;
+
+    // Body-Puffer anlegen/erweitern
+    String *body = reinterpret_cast<String*>(request->_tempObject);
+    if (index == 0) {
+      body = new String();
+      body->reserve(total ? total : (len + 64));
+      request->_tempObject = body;
+    }
+    body->concat((const char*)data, len);
+
+    // Letzter Chunk?
+    if (index + len >= total) {
+      bool merge   = true;
+      bool saveNow = true;
+      if (request->hasParam("merge")) {
+        const String v = request->getParam("merge")->value();
+        merge = !(v == "0" || v == "false" || v == "no");
+      }
+      if (request->hasParam("save")) {
+        const String v = request->getParam("save")->value();
+        saveNow = !(v == "0" || v == "false" || v == "no");
+      }
+
+      String err;
+      const bool ok = _settings.restore(*body, /*merge=*/merge, /*saveNow=*/saveNow, &err);
+
+      String reply;
+      if (ok) {
+        JsonDocument doc;
+        doc["ok"]      = true;
+        doc["merge"]   = merge;
+        doc["saved"]   = saveNow;
+        doc["device"]  = _settings.get.deviceName();
+        doc["mqttSrv"] = _settings.get.mqttServer();
+        serializeJson(doc, reply);
+        request->send(200, "application/json; charset=utf-8", reply);
+      } else {
+        JsonDocument doc;
+        doc["ok"]    = false;
+        doc["error"] = err;
+        serializeJson(doc, reply);
+        request->send(400, "application/json; charset=utf-8", reply);
+      }
+
+      // Cleanup
+      delete body;
+      request->_tempObject = nullptr;
+    }
+  }
+);
+
+
+
+
     server.onNotFound([](AsyncWebServerRequest *request)
                       { request->send(418, "text/plain", "418 I'm a teapot"); });
 
@@ -575,8 +686,6 @@ void loop()
     // Make sure wifi is in the right mode
     if (WiFi.status() == WL_CONNECTED)
     { // No use going to next step unless WIFI is up and running.
-      // ws.cleanupClients(); // clean unused client connections
-      //  MDNS.update();
       if (millis() - mqtttimer > (_settings.data.mqttRefresh * 1000) || mqtttimer == 0)
       {
         writeLog("<MQTT> Data Send...");
@@ -589,7 +698,7 @@ void loop()
     notificationLED(); // notification LED routine
     checkWiFiAndMaybeReboot();
 
-    if ((haDiscTrigger || _settings.haDiscovery()) && measureJson(Json) > jsonSize)
+    if ((haDiscTrigger || _settings.get.haDiscovery()) && measureJson(Json) > jsonSize)
     {
       if (sendHaDiscovery())
       {
@@ -740,16 +849,16 @@ bool connectMQTT()
 {
   if (!mqttclient.connected())
   {
-    if (mqttclient.connect(mqttClientId, _settings.mqttUser(), _settings.mqttPassword(), (topic + "/Alive").c_str(), 0, true, "false", true))
+    if (mqttclient.connect(mqttClientId, _settings.get.mqttUser(), _settings.get.mqttPassword(), (topic + "/Alive").c_str(), 0, true, "false", true))
     {
       mqttclient.publish((topic + String("/IP")).c_str(), String(WiFi.localIP().toString()).c_str(), true);
       mqttclient.publish((topic + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
       mqttclient.subscribe((topic + "/Remote_Control").c_str());
 
-      if (strlen(_settings.mqttTriggerPath()) > 0)
+      if (strlen(_settings.get.mqttTriggerPath()) > 0)
       {
         writeLog("MQTT Data Trigger Subscribed");
-        mqttclient.subscribe(_settings.mqttTriggerPath());
+        mqttclient.subscribe(_settings.get.mqttTriggerPath());
       }
       return true;
     }
@@ -780,7 +889,7 @@ bool sendtoMQTT()
   mqttclient.publish((mqttDeviceName + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
   mqttclient.publish((mqttDeviceName + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
   mqttclient.publish((mqttDeviceName + String("/Remote_Control_State")).c_str(), remoteControlState ? "true" : "false");
-  if (!_settings.mqttJson())
+  if (!_settings.get.mqttJson())
   {
 
     for (JsonPair i : Json.as<JsonObject>())
@@ -843,8 +952,6 @@ bool sendHaDiscovery()
                                "}";
 
   char topBuff[128];
-  // char configBuff[1024];
-  // size_t mqttContentLength;
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
     if (!Json[haDescriptor[i][0]].isNull())

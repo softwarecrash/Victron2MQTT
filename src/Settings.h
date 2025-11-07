@@ -3,112 +3,201 @@
 #include <EEPROM.h>
 #include <ArduinoJson.h>
 
-// Gesamter EEPROM-Bereich für Settings (Bytes).
-// Wenn deine JSON mal größer wird: hier auf 4096 erhöhen.
+/*
+  Settings.h — namespaced accessors (get./set.), single source of truth,
+                self-healing, backup/restore.
+
+  - Use:   _settings.get.rcState()
+           _settings.set.rcState(true)
+  - One central X-macro list defines all fields (key, name, default).
+  - No CONFIG_VERSION: load() reads → appends missing defaults → saves if needed.
+  - WebUI helpers: backup() and restore().
+  - ArduinoJson 7 (generic JsonDocument), EEPROM header with CRC + MAGIC.
+  - Comments in English.
+*/
+
 #ifndef EEPROM_SIZE
 #define EEPROM_SIZE 2048
 #endif
 
+// ---------------------------------------------------------------------------
+// SINGLE SOURCE OF TRUTH
+//
+// Macros:
+//   XX_STR (jsonKey, apiName, defaultStr)
+//   XX_UINT(jsonKey, apiName, defaultUInt)
+//   XX_BOOL(jsonKey, apiName, defaultBool)
+//
+// jsonKey = key inside JSON/EEPROM
+// apiName = lowerCamel for .get.<apiName>() and .set.<apiName>(...)
+// ---------------------------------------------------------------------------
+#define SETTINGS_FIELDS(XX_STR, XX_UINT, XX_BOOL)                               \
+  /* Identity & Network */                                                      \
+  XX_STR ("deviceName",    deviceName,    "Victron2MQTT")                       \
+  XX_STR ("staticIP",      staticIP,      "")                                   \
+  XX_STR ("staticGW",      staticGW,      "")                                   \
+  XX_STR ("staticSN",      staticSN,      "")                                   \
+  XX_STR ("staticDNS",     staticDNS,     "")                                   \
+                                                                                \
+  /* MQTT */                                                                    \
+  XX_STR ("mqttServer",    mqttServer,    "")                                   \
+  XX_STR ("mqttUser",      mqttUser,      "")                                   \
+  XX_STR ("mqttPassword",  mqttPassword,  "")                                   \
+  XX_STR ("mqttTopic",     mqttTopic,     "Victron")                            \
+  XX_STR ("mqttTrigger",   mqttTriggerPath, "")                                 \
+  XX_UINT("mqttPort",      mqttPort,      0)                                    \
+  XX_UINT("mqttRefresh",   mqttRefresh,   300)                                  \
+  XX_BOOL("mqttJson",      mqttJson,      false)                                \
+                                                                                \
+  /* Web UI */                                                                  \
+  XX_STR ("httpUser",      httpUser,      "")                                   \
+  XX_STR ("httpPass",      httpPass,      "")                                   \
+  XX_BOOL("webUIdarkmode", webUIdarkmode, false)                                \
+                                                                                \
+  /* Integrations / Flags */                                                    \
+  XX_BOOL("haDiscovery",   haDiscovery,   false)                                \
+  XX_BOOL("keepRcState",   keepRcState,   false)                                \
+  XX_BOOL("rcState",       rcState,       false)                                \
+  XX_UINT("LEDBrightness", LEDBrightness, 127)
+
+// ---------------------------------------------------------------------------
+
 class Settings {
 public:
-  // Bei Schemaänderungen erhöhen -> Defaults werden ergänzt/angepasst
-  static const uint16_t CONFIG_VERSION = 13;
+  // ========== Proxies ==========
+  class GetProxy {
+  public:
+    explicit GetProxy(Settings* s) : s(s) {}
 
-  // ------- Getter (keine festen Längen, nur EEPROM limitiert) -------
-  const char* deviceName()       const { return getStr("deviceName", "Victron2MQTT"); }
-  const char* mqttServer()       const { return getStr("mqttServer",  ""); }
-  const char* mqttUser()         const { return getStr("mqttUser",    ""); }
-  const char* mqttPassword()     const { return getStr("mqttPassword",""); }
-  const char* mqttTopic()        const { return getStr("mqttTopic",   "Victron"); }
-  const char* mqttTriggerPath()  const { return getStr("mqttTrigger", ""); }
-  const char* httpUser()         const { return getStr("httpUser",    ""); }
-  const char* httpPass()         const { return getStr("httpPass",    ""); }
-  const char* staticIP()         const { return getStr("staticIP",    ""); }
-  const char* staticGW()         const { return getStr("staticGW",    ""); }
-  const char* staticSN()         const { return getStr("staticSN",    ""); }
-  const char* staticDNS()        const { return getStr("staticDNS",   ""); }
+    // Auto-generated getters
+    #define GEN_GETTER_STR(jsonKey, apiName, d) \
+      const char* apiName() const { return s->getStr(jsonKey, d, s->_tmp_##apiName); }
+    #define GEN_GETTER_UINT(jsonKey, apiName, d) \
+      uint16_t apiName() const { return (uint16_t)s->getUInt(jsonKey, (uint32_t)(d)); }
+    #define GEN_GETTER_BOOL(jsonKey, apiName, d) \
+      bool apiName() const { return s->getBool(jsonKey, d); }
+    SETTINGS_FIELDS(GEN_GETTER_STR, GEN_GETTER_UINT, GEN_GETTER_BOOL)
+    #undef GEN_GETTER_STR
+    #undef GEN_GETTER_UINT
+    #undef GEN_GETTER_BOOL
 
-  uint16_t mqttPort()            const { return (uint16_t)getUInt("mqttPort", 0); }
-  uint16_t mqttRefresh()         const { return (uint16_t)getUInt("mqttRefresh", 300); }
-  bool     mqttJson()            const { return getBool("mqttJson", false); }
-  bool     webUIdarkmode()       const { return getBool("webUIdarkmode", false); }
-  bool     haDiscovery()         const { return getBool("haDiscovery", false); }
-  bool     keepRcState()         const { return getBool("keepRcState", false); }
-  bool     rcState()             const { return getBool("rcState", false); }
-  uint8_t  LEDBrightness()       const { return (uint8_t)getUInt("LEDBrightness", 127); }
+  private:
+    Settings* s;
+    friend class Settings;
+  };
 
-  // ------- Setter -------
-  void setDeviceName(const String& v)      { setStr("deviceName", v); }
-  void setMqttServer(const String& v)      { setStr("mqttServer", v); }
-  void setMqttUser(const String& v)        { setStr("mqttUser", v); }
-  void setMqttPassword(const String& v)    { setStr("mqttPassword", v); }
-  void setMqttTopic(const String& v)       { setStr("mqttTopic", v); }
-  void setMqttTriggerPath(const String& v) { setStr("mqttTrigger", v); }
-  void setHttpUser(const String& v)        { setStr("httpUser", v); }
-  void setHttpPass(const String& v)        { setStr("httpPass", v); }
-  void setStaticIP(const String& v)        { setStr("staticIP", v); }
-  void setStaticGW(const String& v)        { setStr("staticGW", v); }
-  void setStaticSN(const String& v)        { setStr("staticSN", v); }
-  void setStaticDNS(const String& v)       { setStr("staticDNS", v); }
-  void setMqttPort(uint16_t v)             { setUInt("mqttPort", v); }
-  void setMqttRefresh(uint16_t v)          { setUInt("mqttRefresh", max<uint16_t>(1, v)); }
-  void setMqttJson(bool v)                 { setBool("mqttJson", v); }
-  void setWebUIdarkmode(bool v)            { setBool("webUIdarkmode", v); }
-  void setHaDiscovery(bool v)              { setBool("haDiscovery", v); }
-  void setKeepRcState(bool v)              { setBool("keepRcState", v); }
-  void setRcState(bool v)                  { setBool("rcState", v); }
-  void setLEDBrightness(uint8_t v)         { setUInt("LEDBrightness", v); }
+  class SetProxy {
+  public:
+    explicit SetProxy(Settings* s) : s(s) {}
 
-  // ------- Kompatibles Read-Only View (für Altstellen) -------
+    // Auto-generated setters (single naming): _settings.set.apiName(...)
+    #define GEN_SETTER_STR(jsonKey, apiName, d) \
+      void apiName(const String& v) { s->setStr(jsonKey, v); } \
+      void apiName(const char* v)  { s->setStr(jsonKey, String(v ? v : "")); }
+    #define GEN_SETTER_UINT(jsonKey, apiName, d) \
+      void apiName(uint16_t v) { s->setUInt(jsonKey, (uint32_t)v); }
+    #define GEN_SETTER_BOOL(jsonKey, apiName, d) \
+      void apiName(bool v) { s->setBool(jsonKey, v); }
+    SETTINGS_FIELDS(GEN_SETTER_STR, GEN_SETTER_UINT, GEN_SETTER_BOOL)
+    #undef GEN_SETTER_STR
+    #undef GEN_SETTER_UINT
+    #undef GEN_SETTER_BOOL
+
+  private:
+    Settings* s;
+    friend class Settings;
+  };
+
+  GetProxy get{this};
+  SetProxy set{this};
+
+  // ========== Legacy DataView (optional, stays for compatibility) ==========
   struct DataView {
-    const char* deviceName;
-    const char* mqttServer;
-    const char* mqttUser;
-    const char* mqttPassword;
-    const char* mqttTopic;
-    const char* mqttTriggerPath;
-    uint16_t    mqttPort;
-    uint16_t    mqttRefresh;
-    bool        mqttJson;
-    bool        webUIdarkmode;
-    const char* httpUser;
-    const char* httpPass;
-    bool        haDiscovery;
-    bool        keepRcState;
-    bool        rcState;
-    uint8_t     LEDBrightness;
-    const char* staticIP;
-    const char* staticGW;
-    const char* staticSN;
-    const char* staticDNS;
+    #define GEN_VIEW_STR(jsonKey, apiName, d)  const char* apiName;
+    #define GEN_VIEW_UINT(jsonKey, apiName, d) uint16_t    apiName;
+    #define GEN_VIEW_BOOL(jsonKey, apiName, d) bool        apiName;
+    SETTINGS_FIELDS(GEN_VIEW_STR, GEN_VIEW_UINT, GEN_VIEW_BOOL)
+    #undef GEN_VIEW_STR
+    #undef GEN_VIEW_UINT
+    #undef GEN_VIEW_BOOL
   } data;
 
-  // ------- Lifecycle -------
+  // ========== Lifecycle ==========
   void load() {
     ensureEEP();
     readFromEEPROM();
-    applyDefaultsAndVersion();
+
+    bool changed = ensureDefaultsFromList();  // append missing keys only
+
+    // Non-destructive sanity rules
+    if (get.mqttRefresh() < 1) { set.mqttRefresh(1); changed = true; }
+
+    if (changed) writeToEEPROM();
     buildView();
   }
 
   void save() {
-    if (mqttRefresh() < 1) setMqttRefresh(1);
+    if (get.mqttRefresh() < 1) set.mqttRefresh(1);
     writeToEEPROM();
     buildView();
   }
 
   void reset() {
     _doc.clear();
-    writeDefaults();
+    writeDefaultsFromList();
     writeToEEPROM();
     buildView();
   }
 
-  String deviceNameStr;
+  // ========== WebUI helpers ==========
+  // Export known settings as JSON (stable ordering). pretty=true enables pretty-print.
+  String backup(bool pretty = false) const {
+    JsonDocument out;
+    exportKnownTo(out);
+    String s;
+    if (pretty) serializeJsonPretty(out, s);
+    else        serializeJson(out, s);
+    return s;
+  }
+
+  // Restore settings from JSON string.
+  // merge=true  → only provided keys overwrite existing; others untouched.
+  // merge=false → replace known keys from input; unknown ignored; then fill missing defaults.
+  // saveNow=true → persist EEPROM immediately on success.
+  // err → optional error text if parse fails.
+  bool restore(const String& json, bool merge = true, bool saveNow = true, String* err = nullptr) {
+    JsonDocument in;
+    DeserializationError de = deserializeJson(in, json);
+    if (de) {
+      if (err) *err = String("JSON parse error: ") + de.c_str();
+      return false;
+    }
+
+    bool changed = false;
+    if (merge) {
+      changed |= mergeKnownFrom(in);
+    } else {
+      clearKnown();
+      changed |= mergeKnownFrom(in);
+      changed |= ensureDefaultsFromList();
+    }
+
+    // Sanity again
+    if (get.mqttRefresh() < 1) { set.mqttRefresh(1); changed = true; }
+
+    if (changed && saveNow) {
+      writeToEEPROM();
+    }
+    buildView();  // reflect in-memory state in any case
+    return true;
+  }
+
+  String deviceNameStr; // convenience copy (optional)
 
 private:
+  // EEPROM header (stable)
   struct Header {
-    uint16_t version;
+    uint16_t version;  // compatibility only (not used for schema)
     uint16_t jsonLen;
     uint32_t crc;
     uint32_t magic;
@@ -117,15 +206,19 @@ private:
   static constexpr uint32_t MAGIC = 0x53435721UL; // "SCW!"
   static constexpr int HEADER_SIZE = sizeof(Header);
 
-  // 👉 ArduinoJson 7: generischer Dokumenttyp ohne feste Kapazität
+  // ArduinoJson 7: generic document (no fixed capacity)
   JsonDocument _doc;
 
-  // temporäre String-Puffer (damit const char* stabil bleibt bis zum nächsten Aufruf)
-  mutable String _tmp_deviceName, _tmp_mqttServer, _tmp_mqttUser, _tmp_mqttPassword,
-                 _tmp_mqttTopic, _tmp_mqttTrigger, _tmp_httpUser, _tmp_httpPass,
-                 _tmp_staticIP, _tmp_staticGW, _tmp_staticSN, _tmp_staticDNS;
+  // String caches for STR getters (keep const char* stable)
+  #define GEN_TMP_STR(jsonKey, apiName, d) mutable String _tmp_##apiName;
+  #define NOOP_UINT(jsonKey, apiName, d)
+  #define NOOP_BOOL(jsonKey, apiName, d)
+  SETTINGS_FIELDS(GEN_TMP_STR, NOOP_UINT, NOOP_BOOL)
+  #undef GEN_TMP_STR
+  #undef NOOP_UINT
+  #undef NOOP_BOOL
 
-  // -------- Helpers --------
+  // ---------- Helpers ----------
   static uint32_t crc32(const uint8_t* data, size_t len) {
     uint32_t crc = 0xffffffff;
     while (len--) {
@@ -145,104 +238,142 @@ private:
     if (!inited) { EEPROM.begin(EEPROM_SIZE); inited = true; }
   }
 
-  void writeDefaults() {
-    _doc.clear();
-    _doc["deviceName"]   = "Victron2MQTT";
-    _doc["mqttServer"]   = "";
-    _doc["mqttUser"]     = "";
-    _doc["mqttPassword"] = "";
-    _doc["mqttTopic"]    = "Victron";
-    _doc["mqttTrigger"]  = "";
-    _doc["mqttPort"]     = 0;
-    _doc["mqttRefresh"]  = 300;
-    _doc["mqttJson"]     = false;
-    _doc["webUIdarkmode"]= false;
-    _doc["httpUser"]     = "";
-    _doc["httpPass"]     = "";
-    _doc["haDiscovery"]  = false;
-    _doc["keepRcState"]  = false;
-    _doc["rcState"]      = false;
-    _doc["LEDBrightness"]= 127;
-    _doc["staticIP"]     = "";
-    _doc["staticGW"]     = "";
-    _doc["staticSN"]     = "";
-    _doc["staticDNS"]    = "";
-    _doc["_coVers"]      = CONFIG_VERSION;
+  // Write full defaults from list
+  void writeDefaultsFromList() {
+    #define APPLY_DEFAULT_STR(jsonKey, apiName, d) _doc[jsonKey] = d;
+    #define APPLY_DEFAULT_UINT(jsonKey, apiName, d) _doc[jsonKey] = (uint32_t)(d);
+    #define APPLY_DEFAULT_BOOL(jsonKey, apiName, d) _doc[jsonKey] = (bool)(d);
+    SETTINGS_FIELDS(APPLY_DEFAULT_STR, APPLY_DEFAULT_UINT, APPLY_DEFAULT_BOOL)
+    #undef APPLY_DEFAULT_STR
+    #undef APPLY_DEFAULT_UINT
+    #undef APPLY_DEFAULT_BOOL
   }
 
-  // Schlanke Migration: fehlende Keys werden ergänzt; vorhandene bleiben erhalten
-void applyDefaultsAndVersion() {
-  const uint16_t cur = _doc["_coVers"].isNull()
-                         ? 0
-                         : (uint16_t)_doc["_coVers"].as<unsigned long>();
+  // Append missing keys (no overwrite). Returns changed flag.
+  bool ensureDefaultsFromList() {
+    bool changed = false;
 
-  if (cur != CONFIG_VERSION) {
-    // fehlende Keys setzen (vorhandene Werte bleiben erhalten)
-    if (_doc["deviceName"].isNull())    _doc["deviceName"]    = "Victron2MQTT";
-    if (_doc["mqttServer"].isNull())    _doc["mqttServer"]    = "";
-    if (_doc["mqttUser"].isNull())      _doc["mqttUser"]      = "";
-    if (_doc["mqttPassword"].isNull())  _doc["mqttPassword"]  = "";
-    if (_doc["mqttTopic"].isNull())     _doc["mqttTopic"]     = "Victron";
-    if (_doc["mqttTrigger"].isNull())   _doc["mqttTrigger"]   = "";
-    if (_doc["mqttPort"].isNull())      _doc["mqttPort"]      = 0;
-    if (_doc["mqttRefresh"].isNull())   _doc["mqttRefresh"]   = 300;
-    if (_doc["mqttJson"].isNull())      _doc["mqttJson"]      = false;
-    if (_doc["webUIdarkmode"].isNull()) _doc["webUIdarkmode"] = false;
-    if (_doc["httpUser"].isNull())      _doc["httpUser"]      = "";
-    if (_doc["httpPass"].isNull())      _doc["httpPass"]      = "";
-    if (_doc["haDiscovery"].isNull())   _doc["haDiscovery"]   = false;
-    if (_doc["keepRcState"].isNull())   _doc["keepRcState"]   = false;
-    if (_doc["rcState"].isNull())       _doc["rcState"]       = false;
-    if (_doc["LEDBrightness"].isNull()) _doc["LEDBrightness"] = 127;
-    if (_doc["staticIP"].isNull())      _doc["staticIP"]      = "";
-    if (_doc["staticGW"].isNull())      _doc["staticGW"]      = "";
-    if (_doc["staticSN"].isNull())      _doc["staticSN"]      = "";
-    if (_doc["staticDNS"].isNull())     _doc["staticDNS"]     = "";
+    #define ENSURE_STR(jsonKey, apiName, d) \
+      if (_doc[jsonKey].isNull()) { _doc[jsonKey] = d; changed = true; }
 
-    _doc["_coVers"] = CONFIG_VERSION;
-    writeToEEPROM();
+    #define ENSURE_UINT(jsonKey, apiName, d) \
+      if (_doc[jsonKey].isNull()) { _doc[jsonKey] = (uint32_t)(d); changed = true; } \
+      else if (!_doc[jsonKey].is<unsigned long>()) { \
+        const char* s = _doc[jsonKey].as<const char*>(); \
+        if (s) { char* e = nullptr; long v = strtol(s, &e, 10); \
+          if (e && *e == '\0' && v >= 0) { _doc[jsonKey] = (uint32_t)v; changed = true; } } \
+      }
+
+    #define ENSURE_BOOL(jsonKey, apiName, d) \
+      if (_doc[jsonKey].isNull()) { _doc[jsonKey] = (bool)(d); changed = true; } \
+      else if (!_doc[jsonKey].is<bool>()) { \
+        const char* s = _doc[jsonKey].as<const char*>(); \
+        if (s) { _doc[jsonKey] = parseBool(s); changed = true; } \
+      }
+
+    SETTINGS_FIELDS(ENSURE_STR, ENSURE_UINT, ENSURE_BOOL)
+
+    #undef ENSURE_STR
+    #undef ENSURE_UINT
+    #undef ENSURE_BOOL
+
+    return changed;
   }
-  deviceNameStr = deviceName();
-}
+
+  static bool parseBool(const char* s) {
+    if (!s) return false;
+    if (!strcasecmp(s, "true"))  return true;
+    if (!strcasecmp(s, "false")) return false;
+    return atoi(s) != 0; // accept "1"/"0"
+  }
+
+  // Export known keys into 'out' (stable ordering)
+  void exportKnownTo(JsonDocument& out) const {
+    #define COPY_OUT_STR(jsonKey, apiName, d) \
+      out[jsonKey] = safeCStr(_doc[jsonKey].as<const char*>(), d);
+    #define COPY_OUT_UINT(jsonKey, apiName, d) \
+      out[jsonKey] = _doc[jsonKey].isNull() ? (uint32_t)(d) : (uint32_t)_doc[jsonKey].as<unsigned long>();
+    #define COPY_OUT_BOOL(jsonKey, apiName, d) \
+      out[jsonKey] = _doc[jsonKey].isNull() ? (bool)(d) : _doc[jsonKey].as<bool>();
+    SETTINGS_FIELDS(COPY_OUT_STR, COPY_OUT_UINT, COPY_OUT_BOOL)
+    #undef COPY_OUT_STR
+    #undef COPY_OUT_UINT
+    #undef COPY_OUT_BOOL
+  }
+
+  // Merge known keys from 'in' (returns changed flag)
+  bool mergeKnownFrom(JsonDocument& in) {
+    bool changed = false;
+
+    #define MERGE_STR(jsonKey, apiName, d) \
+      if (!in[jsonKey].isNull()) { \
+        const char* nv = in[jsonKey].as<const char*>(); \
+        const char* ov = _doc[jsonKey].as<const char*>(); \
+        if (!ov || !nv || strcmp(nv, ov) != 0) { _doc[jsonKey] = nv ? nv : d; changed = true; } \
+      }
+
+    #define MERGE_UINT(jsonKey, apiName, d) \
+      if (!in[jsonKey].isNull()) { \
+        uint32_t nv = in[jsonKey].as<unsigned long>(); \
+        uint32_t ov = _doc[jsonKey].isNull() ? (uint32_t)(d) : (uint32_t)_doc[jsonKey].as<unsigned long>(); \
+        if (nv != ov) { _doc[jsonKey] = nv; changed = true; } \
+      }
+
+    #define MERGE_BOOL(jsonKey, apiName, d) \
+      if (!in[jsonKey].isNull()) { \
+        bool nv = in[jsonKey].as<bool>(); \
+        bool ov = _doc[jsonKey].isNull() ? (bool)(d) : _doc[jsonKey].as<bool>(); \
+        if (nv != ov) { _doc[jsonKey] = nv; changed = true; } \
+      }
+
+    SETTINGS_FIELDS(MERGE_STR, MERGE_UINT, MERGE_BOOL)
+
+    #undef MERGE_STR
+    #undef MERGE_UINT
+    #undef MERGE_BOOL
+
+    return changed;
+  }
+
+  // Clear known keys (keeps unknown/private keys intact)
+  void clearKnown() {
+    #define CLEAR_KEY(jsonKey, apiName, d) _doc.remove(jsonKey);
+    SETTINGS_FIELDS(CLEAR_KEY, CLEAR_KEY, CLEAR_KEY)
+    #undef CLEAR_KEY
+  }
+
+  static const char* safeCStr(const char* s, const char* dflt) {
+    return s ? s : dflt;
+  }
 
   void buildView() {
-    data.deviceName       = deviceName();
-    data.mqttServer       = mqttServer();
-    data.mqttUser         = mqttUser();
-    data.mqttPassword     = mqttPassword();
-    data.mqttTopic        = mqttTopic();
-    data.mqttTriggerPath  = mqttTriggerPath();
-    data.mqttPort         = mqttPort();
-    data.mqttRefresh      = mqttRefresh();
-    data.mqttJson         = mqttJson();
-    data.webUIdarkmode    = webUIdarkmode();
-    data.httpUser         = httpUser();
-    data.httpPass         = httpPass();
-    data.haDiscovery      = haDiscovery();
-    data.keepRcState      = keepRcState();
-    data.rcState          = rcState();
-    data.LEDBrightness    = LEDBrightness();
-    data.staticIP         = staticIP();
-    data.staticGW         = staticGW();
-    data.staticSN         = staticSN();
-    data.staticDNS        = staticDNS();
+    #define FILL_VIEW_STR(jsonKey, apiName, d)  data.apiName = get.apiName();
+    #define FILL_VIEW_UINT(jsonKey, apiName, d) data.apiName = get.apiName();
+    #define FILL_VIEW_BOOL(jsonKey, apiName, d) data.apiName = get.apiName();
+    SETTINGS_FIELDS(FILL_VIEW_STR, FILL_VIEW_UINT, FILL_VIEW_BOOL)
+    #undef FILL_VIEW_STR
+    #undef FILL_VIEW_UINT
+    #undef FILL_VIEW_BOOL
+
+    deviceNameStr = get.deviceName();
   }
 
+  // ---------- EEPROM R/W ----------
   void writeToEEPROM() {
     String payload;
     serializeJson(_doc, payload);
 
     const uint16_t maxPayload = EEPROM_SIZE - HEADER_SIZE;
     if (payload.length() > maxPayload) {
-      // JSON zu groß für EEPROM → Fallback: Defaults + Hinweis
-      writeDefaults();
-      _doc["oversize"] = true; // optionaler Marker
+      // Too large: reset to defaults + marker
+      writeDefaultsFromList();
+      _doc["oversize"] = true;
       payload = String();
       serializeJson(_doc, payload);
     }
 
     Header h;
-    h.version = CONFIG_VERSION;
+    h.version = 1; // compatibility; not used for schema
     h.jsonLen = (uint16_t)payload.length();
     h.magic   = MAGIC;
     h.crc     = crc32((const uint8_t*)payload.c_str(), h.jsonLen);
@@ -258,8 +389,8 @@ void applyDefaultsAndVersion() {
     int addr = 0;
     readBytes(addr, (uint8_t*)&h, sizeof(h)); addr += sizeof(h);
 
-    if (h.magic != MAGIC || h.version == 0 || h.jsonLen > (EEPROM_SIZE - HEADER_SIZE)) {
-      writeDefaults();
+    if (h.magic != MAGIC || h.jsonLen == 0 || h.jsonLen > (EEPROM_SIZE - HEADER_SIZE)) {
+      writeDefaultsFromList();
       writeToEEPROM();
       return;
     }
@@ -269,15 +400,16 @@ void applyDefaultsAndVersion() {
 
     const uint32_t c = crc32((const uint8_t*)payload.c_str(), h.jsonLen);
     if (c != h.crc) {
-      writeDefaults();
+      writeDefaultsFromList();
       writeToEEPROM();
       return;
     }
 
     _doc.clear();
     if (deserializeJson(_doc, payload)) {
-      writeDefaults();
+      writeDefaultsFromList();
       writeToEEPROM();
+      return;
     }
   }
 
@@ -288,11 +420,11 @@ void applyDefaultsAndVersion() {
     for (size_t i = 0; i < n; ++i) buf[i] = EEPROM.read(addr + i);
   }
 
-  // ------- JSON Access Helpers -------
-  const char* getStr(const char* key, const char* dflt) const {
-    String& slot = tmpForKey(key);
-    slot = _doc[key].isNull() ? dflt : _doc[key].as<const char*>();
-    return slot.c_str();
+  // ---------- JSON access helpers ----------
+  const char* getStr(const char* key, const char* dflt, String& cache) const {
+    const char* v = _doc[key].isNull() ? dflt : _doc[key].as<const char*>();
+    cache = v ? v : dflt;
+    return cache.c_str();
   }
   bool getBool(const char* key, bool dflt) const {
     return _doc[key].isNull() ? dflt : _doc[key].as<bool>();
@@ -304,20 +436,5 @@ void applyDefaultsAndVersion() {
   void setStr(const char* key, const String& v) { _doc[key] = v; }
   void setBool(const char* key, bool v)         { _doc[key] = v; }
   void setUInt(const char* key, uint32_t v)     { _doc[key] = v; }
-
-  String& tmpForKey(const char* key) const {
-    if      (!strcmp(key, "deviceName")) return _tmp_deviceName;
-    else if (!strcmp(key, "mqttServer")) return _tmp_mqttServer;
-    else if (!strcmp(key, "mqttUser"))   return _tmp_mqttUser;
-    else if (!strcmp(key, "mqttPassword")) return _tmp_mqttPassword;
-    else if (!strcmp(key, "mqttTopic"))  return _tmp_mqttTopic;
-    else if (!strcmp(key, "mqttTrigger"))return _tmp_mqttTrigger;
-    else if (!strcmp(key, "httpUser"))   return _tmp_httpUser;
-    else if (!strcmp(key, "httpPass"))   return _tmp_httpPass;
-    else if (!strcmp(key, "staticIP"))   return _tmp_staticIP;
-    else if (!strcmp(key, "staticGW"))   return _tmp_staticGW;
-    else if (!strcmp(key, "staticSN"))   return _tmp_staticSN;
-    else if (!strcmp(key, "staticDNS"))  return _tmp_staticDNS;
-    return _tmp_deviceName;
-  }
 };
+

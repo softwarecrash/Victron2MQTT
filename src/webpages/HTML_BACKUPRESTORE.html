@@ -1,0 +1,64 @@
+%pre_head_template%
+
+<figure class="text-center">
+  <h1>Settings</h1>
+</figure>
+
+<div class="d-grid gap-2">
+    <a class="btn btn-primary" href="/api/settings/backup?pretty=1" download="Victron2MQTT-backup.json">Download Backup</a>
+  <form id="restoreform" onsubmit="return false;">
+    <div class="input-group">
+      <input class="form-control" id="restorefile" aria-describedby="restorefile" aria-label="Restore"
+             accept=".json,application/json" type="file" name="restorejson">
+      <input class="btn btn-outline-warning" type="button" value="Restore (Merge)" onclick="postRestore(true)">
+      <input class="btn btn-outline-danger"  type="button" value="Restore (Replace)" onclick="postRestore(false)">
+    </div>
+  </form>
+
+  <div id="restore-result" class="small text-muted" style="display:none;"></div>
+
+  <a class="btn btn-primary" href="/settings" role="button">Back</a>
+</div>
+
+<script>
+  window.postRestore = async function(merge) {
+    const out = document.getElementById('restore-result');
+    const inp = document.getElementById('restorefile');
+    if (!inp || !inp.files || !inp.files.length) {
+      alert('Please select a JSON backup file first.');
+      return;
+    }
+
+    try {
+      const file = inp.files[0];
+      const payload = await file.text();
+
+      const res = await fetch('/api/settings/restore?merge=' + (merge ? '1' : '0') + '&save=1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload
+      });
+
+      const text = await res.text();
+      let json = {};
+      try { json = JSON.parse(text || '{}'); } catch (_) {}
+
+      out.style.display = '';
+      if (res.ok && json.ok) {
+        out.className = 'small text-success';
+        out.textContent = 'Restore OK. Saved: ' + (json.saved ? 'yes' : 'no') +
+                          '. Device: ' + (json.device || '-') + '.';
+      } else {
+        out.className = 'small text-danger';
+        out.textContent = 'Restore failed: ' + (json.error || ('HTTP ' + res.status));
+      }
+    } catch (err) {
+      out.style.display = '';
+      out.className = 'small text-danger';
+      out.textContent = 'Restore failed: ' + (err && err.message ? err.message : 'unknown error');
+    }
+  };
+</script>
+
+%pre_foot_template%
+<p hidden></p>
