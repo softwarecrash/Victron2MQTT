@@ -123,8 +123,16 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
  */
 void VeDirectFrameHandler::textRxEvent(char *mName, char *mValue)
 {
-	strcpy(tempName[frameIndex], mName);   // copy name to temporary buffer
-	strcpy(tempValue[frameIndex], mValue); // copy value to temporary buffer
+	if (frameIndex >= (int)frameLen) {
+		// Drop excess lines to avoid temp buffer overflow.
+		return;
+	}
+
+	// Copy with bounds and force NUL termination.
+	strncpy(tempName[frameIndex], mName, nameLen - 1);
+	tempName[frameIndex][nameLen - 1] = '\0';
+	strncpy(tempValue[frameIndex], mValue, valueLen - 1);
+	tempValue[frameIndex][valueLen - 1] = '\0';
 	frameIndex++;
 }
 
@@ -138,7 +146,7 @@ void VeDirectFrameHandler::frameEndEvent(bool valid)
 {
 	if (valid)
 	{
-		for (int i = 0; i < frameIndex; i++)
+		for (int i = 0; i < frameIndex && i < (int)frameLen; i++)
 		{
 			// read each name already in the temp buffer
 			bool nameExists = false;

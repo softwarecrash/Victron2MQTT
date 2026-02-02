@@ -8,10 +8,10 @@
 class VeDirectFrameHandler
 {
 public:
-	static const size_t frameLen = 22;          // VE.Direct Protocol: max frame size is 22
+	static const size_t buffLen = 40;           // Maximum number of lines possible from the device.
+	static const size_t frameLen = buffLen;     // Temp frame buffers must not be smaller than public buffers.
 	static const size_t nameLen = 9;            // VE.Direct Protocol: max name size is 9 including /0
 	static const size_t valueLen = 33;          // VE.Direct Protocol: max value size is 33 including /0
-	static const size_t buffLen = 40;           // Maximum number of lines possible from the device. Current protocol shows this to be the
 
 
 
