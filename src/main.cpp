@@ -13,6 +13,7 @@
 #include <ESPAsyncWiFiManager.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <ctype.h>
 
 // #include <WebSerialLite.h>
 #include <MycilaWebSerial.h>
@@ -69,7 +70,6 @@ DallasTemperature dallasTemp(&oneWire);
 NonBlockingDallas tempSens(&dallasTemp);
 
 JsonDocument Json;
-JsonObject jsonESP = Json["ESP_Data"].to<JsonObject>();
 #include "status-LED.h"
 ADC_MODE(ADC_VCC);
 // --- WiFi watchdog (non-blocking) ---
@@ -78,6 +78,200 @@ static uint8_t g_retries = 0;
 
 static const uint32_t WIFI_RECONNECT_INTERVAL_MS = 15UL * 1000UL;
 static const uint32_t WIFI_FORCE_REBOOT_MS = 5UL * 60UL * 1000UL;
+
+static String sanitizeMqttBaseTopic(const String &raw)
+{
+  String out;
+  out.reserve(raw.length() + 4);
+  bool lastWasSlash = false;
+  bool lastWasUnderscore = false;
+
+  for (size_t i = 0; i < raw.length(); i++)
+  {
+    const char c = raw[i];
+    if (isalnum((unsigned char)c) || c == '_' || c == '-')
+    {
+      out += c;
+      lastWasSlash = false;
+      lastWasUnderscore = (c == '_');
+      continue;
+    }
+
+    if (c == '/')
+    {
+      if (!lastWasSlash && out.length() > 0)
+      {
+        out += '/';
+        lastWasSlash = true;
+        lastWasUnderscore = false;
+      }
+      continue;
+    }
+
+    if (!lastWasUnderscore && out.length() > 0 && !lastWasSlash)
+    {
+      out += '_';
+      lastWasUnderscore = true;
+    }
+  }
+
+  while (out.length() > 0 && (out[0] == '/' || out[0] == '_'))
+    out.remove(0, 1);
+  while (out.length() > 0 && (out[out.length() - 1] == '/' || out[out.length() - 1] == '_'))
+    out.remove(out.length() - 1, 1);
+
+  if (out.length() == 0)
+    out = "Victron";
+  return out;
+}
+
+static String sanitizeMqttSegment(const char *raw)
+{
+  if (!raw)
+    return String();
+  String out;
+  out.reserve(strlen(raw));
+  bool lastWasUnderscore = false;
+  for (size_t i = 0; raw[i] != '\0'; i++)
+  {
+    const char c = raw[i];
+    if (isalnum((unsigned char)c) || c == '_' || c == '-')
+    {
+      out += c;
+      lastWasUnderscore = (c == '_');
+    }
+    else if (!lastWasUnderscore && out.length() > 0)
+    {
+      out += '_';
+      lastWasUnderscore = true;
+    }
+  }
+
+  while (out.length() > 0 && out[0] == '_')
+    out.remove(0, 1);
+  while (out.length() > 0 && out[out.length() - 1] == '_')
+    out.remove(out.length() - 1, 1);
+  return out;
+}
+
+static String buildTopicPath(const String &base, const char *segment)
+{
+  const String cleanSeg = sanitizeMqttSegment(segment);
+  if (cleanSeg.length() == 0)
+    return base;
+  return base + "/" + cleanSeg;
+}
+
+static bool jsonVariantToString(JsonVariant value, String &out)
+{
+  out = "";
+  if (value.isNull())
+    return false;
+  if (value.is<JsonObject>() || value.is<JsonArray>())
+  {
+    serializeJson(value, out);
+    return true;
+  }
+  out = value.as<String>();
+  return true;
+}
+
+static JsonObject ensureEspDataObject()
+{
+  JsonVariant v = Json["ESP_Data"];
+  if (!v.is<JsonObject>())
+  {
+    v.clear();
+    return v.to<JsonObject>();
+  }
+  return v.as<JsonObject>();
+}
+
+static bool isKnownRootKey(const char *key)
+{
+  if (!key || key[0] == '\0')
+    return false;
+
+  if (strcmp(key, "ESP_Data") == 0 ||
+      strcmp(key, "Device_connection") == 0 ||
+      strcmp(key, "Remote_Control_State") == 0 ||
+      strcmp(key, "Device_name") == 0)
+  {
+    return true;
+  }
+
+  for (size_t j = 0; j < VePrettyDataSize; j++)
+  {
+    VePrettyEntry entry;
+    memcpy_P(&entry, &VePrettyData[j], sizeof(entry));
+    char name[32];
+    strcpy_P(name, entry.name);
+    if (strcmp(name, key) == 0)
+      return true;
+  }
+  return false;
+}
+
+static bool isKnownEspDataKey(const char *key)
+{
+  if (!key || key[0] == '\0')
+    return false;
+
+  static const char *const knownKeys[] = {
+      "IP",
+      "sw_version",
+      "Wifi_RSSI",
+      "ESP_VCC",
+      "Free_Heap",
+      "json_size",
+      "WS_Clients",
+      "Runtime"};
+
+  for (size_t i = 0; i < sizeof(knownKeys) / sizeof(knownKeys[0]); i++)
+  {
+    if (strcmp(key, knownKeys[i]) == 0)
+      return true;
+  }
+
+  return strncmp(key, "DS18B20_", 8) == 0;
+}
+
+static void pruneUnknownMqttKeys()
+{
+  bool removed = true;
+  while (removed)
+  {
+    removed = false;
+    for (JsonPair i : Json.as<JsonObject>())
+    {
+      const char *rootKey = i.key().c_str();
+      if (!isKnownRootKey(rootKey))
+      {
+        Json.remove(rootKey);
+        removed = true;
+        break;
+      }
+    }
+  }
+
+  JsonObject esp = ensureEspDataObject();
+  while (true)
+  {
+    removed = false;
+    for (JsonPair i : esp)
+    {
+      const char *key = i.key().c_str();
+      if (!isKnownEspDataKey(key))
+      {
+        esp.remove(key);
+        removed = true;
+        break;
+      }
+    }
+    if (!removed)
+      break;
+  }
+}
 
 //----------------------------------------------------------------------
 void saveConfigCallback()
@@ -290,7 +484,10 @@ void setup()
   veSerial.enableRxGPIOPullUp(false);
   myve.callback(prozessData);
 
-  sprintf(mqttClientId, "%s-%06X", _settings.get.deviceName(), ESP.getChipId());
+  String clientIdName = sanitizeMqttSegment(_settings.get.deviceName());
+  if (clientIdName.length() == 0)
+    clientIdName = "Victron2MQTT";
+  snprintf(mqttClientId, sizeof(mqttClientId), "%s-%06X", clientIdName.c_str(), ESP.getChipId());
 
   AsyncWiFiManagerParameter custom_mqtt_server("mqtt_server", "MQTT server", NULL, 32);
   AsyncWiFiManagerParameter custom_mqtt_user("mqtt_user", "MQTT User", NULL, 32);
@@ -341,7 +538,7 @@ void setup()
     _settings.set.mqttServer(custom_mqtt_server.getValue());
     _settings.set.mqttUser(custom_mqtt_user.getValue());
     _settings.set.mqttPassword(custom_mqtt_pass.getValue());
-    _settings.set.mqttTopic(custom_mqtt_topic.getValue());
+    _settings.set.mqttTopic(sanitizeMqttBaseTopic(custom_mqtt_topic.getValue()));
     _settings.set.mqttPort(atoi(custom_mqtt_port.getValue()));
     _settings.set.mqttRefresh(atoi(custom_mqtt_refresh.getValue()));
     _settings.set.mqttTriggerPath(custom_mqtt_triggerpath.getValue());
@@ -355,7 +552,14 @@ void setup()
     ESP.restart();
   }
 
-  topic = _settings.get.mqttTopic();
+  const String configuredTopic = _settings.get.mqttTopic();
+  topic = sanitizeMqttBaseTopic(configuredTopic);
+  if (topic != configuredTopic)
+  {
+    writeLog("[MQTT] normalized topic '%s' -> '%s'", configuredTopic.c_str(), topic.c_str());
+    _settings.set.mqttTopic(topic);
+    _settings.save();
+  }
   mqttclient.setServer(_settings.get.mqttServer(), _settings.get.mqttPort());
   mqttclient.setCallback(mqttCallback);
 
@@ -497,7 +701,7 @@ void setup()
                   _settings.set.mqttPort(request->arg("post_mqttPort").toInt());
                   _settings.set.mqttUser(request->arg("post_mqttUser"));
                   _settings.set.mqttPassword(request->arg("post_mqttPassword"));
-                  _settings.set.mqttTopic(request->arg("post_mqttTopic"));
+                  _settings.set.mqttTopic(sanitizeMqttBaseTopic(request->arg("post_mqttTopic")));
                   _settings.set.mqttRefresh(request->arg("post_mqttRefresh").toInt());
                   _settings.set.deviceName(request->arg("post_deviceName"));
                   _settings.set.mqttJson(request->arg("post_mqttjson") == "true");
@@ -660,6 +864,7 @@ server.on(
 
     server.begin();
 
+    JsonObject jsonESP = ensureEspDataObject();
     jsonESP["IP"] = WiFi.localIP().toString();
     jsonESP["sw_version"] = SOFTWARE_VERSION;
     tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
@@ -706,6 +911,7 @@ void loop()
         jsonSize = measureJson(Json);
       }
     }
+    JsonObject jsonESP = ensureEspDataObject();
     jsonESP["Wifi_RSSI"] = WiFi.RSSI();
   }
 
@@ -727,6 +933,9 @@ void prozessData()
 
 bool getJsonData()
 {
+  pruneUnknownMqttKeys();
+  JsonObject jsonESP = ensureEspDataObject();
+  Json["Device_name"] = _settings.get.deviceName();
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
   jsonESP["Free_Heap"] = ESP.getFreeHeap();
@@ -737,7 +946,7 @@ bool getJsonData()
   for (size_t i = 0; i < myve.veEnd; i++)
   {
 
-    if (myve.veName[i] == NULL || strlen(myve.veName[i]) == 0 || myve.veValue[i] == NULL || strlen(myve.veValue[i]) == 0)
+    if (strlen(myve.veName[i]) == 0 || strlen(myve.veValue[i]) == 0)
     {
       i = myve.veEnd;
       break;
@@ -839,9 +1048,9 @@ bool getJsonData()
       }
     }
 
-    Json["Device_connection"] = !myve.veError;
-    Json["Remote_Control_State"] = remoteControlState;
   }
+  Json["Device_connection"] = !myve.veError;
+  Json["Remote_Control_State"] = remoteControlState;
   return true;
 }
 
@@ -849,16 +1058,21 @@ bool connectMQTT()
 {
   if (!mqttclient.connected())
   {
-    if (mqttclient.connect(mqttClientId, _settings.get.mqttUser(), _settings.get.mqttPassword(), (topic + "/Alive").c_str(), 0, true, "false", true))
+    const String aliveTopic = buildTopicPath(topic, "Alive");
+    if (mqttclient.connect(mqttClientId, _settings.get.mqttUser(), _settings.get.mqttPassword(), aliveTopic.c_str(), 0, true, "false", true))
     {
-      mqttclient.publish((topic + String("/IP")).c_str(), String(WiFi.localIP().toString()).c_str(), true);
-      mqttclient.publish((topic + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
-      mqttclient.subscribe((topic + "/Remote_Control").c_str());
+      const String ipTopic = buildTopicPath(topic, "IP");
+      const String remoteTopic = buildTopicPath(topic, "Remote_Control");
+      const String ipPayload = WiFi.localIP().toString();
+      mqttclient.publish(ipTopic.c_str(), ipPayload.c_str(), true);
+      mqttclient.publish(aliveTopic.c_str(), "true", true); // LWT online message must be retained!
+      mqttclient.subscribe(remoteTopic.c_str());
 
-      if (strlen(_settings.get.mqttTriggerPath()) > 0)
+      const char *triggerPath = _settings.get.mqttTriggerPath();
+      if (strlen(triggerPath) > 0)
       {
         writeLog("MQTT Data Trigger Subscribed");
-        mqttclient.subscribe(_settings.get.mqttTriggerPath());
+        mqttclient.subscribe(triggerPath);
       }
       return true;
     }
@@ -882,24 +1096,48 @@ bool sendtoMQTT()
   {
     return false;
   }
+  pruneUnknownMqttKeys();
 
-  String mqttDeviceName = topic;
+  const String aliveTopic = buildTopicPath(topic, "Alive");
+  const String wifiTopic = buildTopicPath(topic, "Wifi_RSSI");
+  const String rcStateTopic = buildTopicPath(topic, "Remote_Control_State");
+  const String wifiPayload = String(WiFi.RSSI());
 
   //-----------------------------------------------------
-  mqttclient.publish((mqttDeviceName + String("/Alive")).c_str(), "true", true); // LWT online message must be retained!
-  mqttclient.publish((mqttDeviceName + String("/Wifi_RSSI")).c_str(), String(WiFi.RSSI()).c_str());
-  mqttclient.publish((mqttDeviceName + String("/Remote_Control_State")).c_str(), remoteControlState ? "true" : "false");
+  mqttclient.publish(aliveTopic.c_str(), "true", true); // LWT online message must be retained!
+  mqttclient.publish(wifiTopic.c_str(), wifiPayload.c_str());
+  mqttclient.publish(rcStateTopic.c_str(), remoteControlState ? "true" : "false");
+
   if (!_settings.get.mqttJson())
   {
-
     for (JsonPair i : Json.as<JsonObject>())
     {
-      mqttclient.publish((mqttDeviceName + "/" + i.key().c_str()).c_str(), i.value().as<String>().c_str());
+      const char *rootKey = i.key().c_str();
+      if (!isKnownRootKey(rootKey))
+      {
+        writeLog("[MQTT] drop unknown key '%s'", rootKey);
+        continue;
+      }
+
+      const String cleanKey = sanitizeMqttSegment(rootKey);
+      if (cleanKey.length() == 0)
+      {
+        writeLog("[MQTT] drop invalid key '%s'", rootKey);
+        continue;
+      }
+
+      String payload;
+      if (!jsonVariantToString(i.value(), payload))
+        continue;
+
+      const String valueTopic = topic + "/" + cleanKey;
+      mqttclient.publish(valueTopic.c_str(), payload.c_str());
     }
   }
   else
   {
-    mqttclient.beginPublish((String(mqttDeviceName + "/DATA")).c_str(), measureJson(Json), false);
+    const String dataTopic = buildTopicPath(topic, "DATA");
+    mqttclient.beginPublish(dataTopic.c_str(), measureJson(Json), false);
     serializeJson(Json, mqttclient);
     mqttclient.endPublish();
   }
@@ -910,18 +1148,22 @@ bool sendtoMQTT()
 void mqttCallback(char *top, byte *payload, unsigned int length) // Need rework
 {
   String messageTemp;
+  messageTemp.reserve(length);
 
   for (unsigned int i = 0; i < length; i++)
   {
     messageTemp += (char)payload[i];
   }
 
-  if (strlen(_settings.data.mqttTriggerPath) > 0 && strcmp(top, _settings.data.mqttTriggerPath) == 0)
+  const char *triggerPath = _settings.get.mqttTriggerPath();
+  if (strlen(triggerPath) > 0 && strcmp(top, triggerPath) == 0)
   {
     writeLog("MQTT Data Trigger Firered Up");
     mqtttimer = 0;
   }
-  if (strcmp(top, (topic + "/Remote_Control").c_str()) == 0)
+
+  const String remoteTopic = buildTopicPath(topic, "Remote_Control");
+  if (strcmp(top, remoteTopic.c_str()) == 0)
   {
     if (messageTemp == "true")
     {
@@ -942,11 +1184,17 @@ bool sendHaDiscovery()
   {
     return false;
   }
+
+  const String availabilityTopic = buildTopicPath(topic, "Alive");
+  const String rcCommandTopic = buildTopicPath(topic, "Remote_Control");
+  const String rcStateTopic = buildTopicPath(topic, "Remote_Control_State");
+  const String deviceModel = Json["Device_model"].as<String>();
+
   String haDeviceDescription = String("\"dev\":") +
                                "{\"ids\":[\"" + mqttClientId + "\"]," +
-                               "\"name\":\"" + _settings.data.deviceName + "\"," +
+                               "\"name\":\"" + String(_settings.get.deviceName()) + "\"," +
                                "\"cu\":\"http://" + WiFi.localIP().toString() + "\"," +
-                               "\"mdl\":\"" + Json["Device_model"].as<String>().c_str() + "\"," +
+                               "\"mdl\":\"" + deviceModel + "\"," +
                                "\"mf\":\"SoftWareCrash\"," +
                                "\"sw\":\"" + SOFTWARE_VERSION + "\"" +
                                "}";
@@ -954,45 +1202,61 @@ bool sendHaDiscovery()
   char topBuff[128];
   for (size_t i = 0; i < sizeof haDescriptor / sizeof haDescriptor[0]; i++)
   {
-    if (!Json[haDescriptor[i][0]].isNull())
+    const char *stateName = (const char *)pgm_read_ptr(&haDescriptor[i][0]);
+    const char *icon = (const char *)pgm_read_ptr(&haDescriptor[i][1]);
+    const char *unit = (const char *)pgm_read_ptr(&haDescriptor[i][2]);
+    const char *devClass = (const char *)pgm_read_ptr(&haDescriptor[i][3]);
+    const String cleanStateName = sanitizeMqttSegment(stateName);
+
+    if (cleanStateName.length() == 0 || Json[stateName].isNull())
+      continue;
+
+    const String stateTopic = buildTopicPath(topic, cleanStateName.c_str());
+
+    String haPayLoad = String("{") +
+                       "\"name\":\"" + String(stateName) + "\"," +
+                       "\"stat_t\":\"" + stateTopic + "\"," +
+                       "\"avty_t\":\"" + availabilityTopic + "\"," +
+                       "\"pl_avail\": \"true\"," +
+                       "\"pl_not_avail\": \"false\"," +
+                       "\"uniq_id\":\"" + String(mqttClientId) + "." + cleanStateName + "\"," +
+                       "\"ic\":\"mdi:" + String(icon) + "\",";
+
+    if (strlen(unit) != 0)
+      haPayLoad += (String) "\"unit_of_meas\":\"" + unit + "\",";
+
+    if (strcmp(unit, "kWh") == 0 || strcmp(unit, "Wh") == 0)
+      haPayLoad += (String) "\"state_class\":\"total\",";
+    if (strcmp(unit, "A") == 0 || strcmp(unit, "V") == 0 || strcmp(unit, "W") == 0)
+      haPayLoad += (String) "\"state_class\":\"measurement\",";
+
+    if (strlen(devClass) != 0)
+      haPayLoad += (String) "\"dev_cla\":\"" + devClass + "\",";
+    haPayLoad += haDeviceDescription;
+    haPayLoad += "}";
+
+    const int written = snprintf(topBuff, sizeof(topBuff), "homeassistant/sensor/%s/%s/config", topic.c_str(), cleanStateName.c_str());
+    if (written <= 0 || written >= (int)sizeof(topBuff))
     {
-      String haPayLoad = String("{") +
-                         "\"name\":\"" + haDescriptor[i][0] + "\"," +
-                         "\"stat_t\":\"" + _settings.data.mqttTopic + "/" + haDescriptor[i][0] + "\"," +
-                         "\"avty_t\":\"" + _settings.data.mqttTopic + "/Alive\"," +
-                         "\"pl_avail\": \"true\"," +
-                         "\"pl_not_avail\": \"false\"," +
-                         "\"uniq_id\":\"" + mqttClientId + "." + haDescriptor[i][0] + "\"," +
-                         "\"ic\":\"mdi:" + haDescriptor[i][1] + "\",";
-      if (strlen(haDescriptor[i][2]) != 0)
-        haPayLoad += (String) "\"unit_of_meas\":\"" + haDescriptor[i][2] + "\",";
-
-      if (strcmp(haDescriptor[i][2], "kWh") == 0 || strcmp(haDescriptor[i][2], "Wh") == 0)
-        haPayLoad += (String) "\"state_class\":\"total\",";
-      if (strcmp(haDescriptor[i][2], "A") == 0 || strcmp(haDescriptor[i][2], "V") == 0 || strcmp(haDescriptor[i][2], "W") == 0)
-        haPayLoad += (String) "\"state_class\":\"measurement\",";
-
-      if (strlen(haDescriptor[i][3]) != 0)
-        haPayLoad += (String) "\"dev_cla\":\"" + haDescriptor[i][3] + "\",";
-      haPayLoad += haDeviceDescription;
-      haPayLoad += "}";
-      sprintf(topBuff, "homeassistant/sensor/%s/%s/config", _settings.data.mqttTopic, haDescriptor[i][0]); // build the topic
-      mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
-      for (size_t i = 0; i < haPayLoad.length(); i++)
-      {
-        mqttclient.write(haPayLoad[i]);
-      }
-      mqttclient.endPublish();
+      writeLog("[MQTT] HA sensor topic too long: %s", cleanStateName.c_str());
+      continue;
     }
+
+    mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
+    for (size_t k = 0; k < haPayLoad.length(); k++)
+    {
+      mqttclient.write(haPayLoad[k]);
+    }
+    mqttclient.endPublish();
   }
 
   // switch
   String haPayLoad = String("{") +
                      "\"name\":\"Remote_Control\"," +
-                     "\"command_topic\":\"" + _settings.data.mqttTopic + "/Remote_Control\"," +
-                     "\"stat_t\":\"" + _settings.data.mqttTopic + "/Remote_Control_State\"," +
-                     "\"uniq_id\":\"" + mqttClientId + ".Remote_Control\"," +
-                     "\"avty_t\":\"" + _settings.data.mqttTopic + "/Alive\"," +
+                     "\"command_topic\":\"" + rcCommandTopic + "\"," +
+                     "\"stat_t\":\"" + rcStateTopic + "\"," +
+                     "\"uniq_id\":\"" + String(mqttClientId) + ".Remote_Control\"," +
+                     "\"avty_t\":\"" + availabilityTopic + "\"," +
                      "\"pl_avail\": \"true\"," +
                      "\"pl_not_avail\": \"false\"," +
                      "\"ic\":\"mdi:toggle-switch-off\"," +
@@ -1003,7 +1267,12 @@ bool sendHaDiscovery()
 
   haPayLoad += haDeviceDescription;
   haPayLoad += "}";
-  sprintf(topBuff, "homeassistant/switch/%s/%s/config", _settings.data.mqttTopic, "Remote_Control"); // build the topic
+  const int switchWritten = snprintf(topBuff, sizeof(topBuff), "homeassistant/switch/%s/%s/config", topic.c_str(), "Remote_Control");
+  if (switchWritten <= 0 || switchWritten >= (int)sizeof(topBuff))
+  {
+    writeLog("[MQTT] HA switch topic too long");
+    return false;
+  }
 
   mqttclient.beginPublish(topBuff, haPayLoad.length(), true);
   for (size_t i = 0; i < haPayLoad.length(); i++)
@@ -1022,6 +1291,7 @@ void handleTemperatureChange(int deviceIndex, int32_t temperatureRAW)
     return;
   writeLog("<DS18x> DS18B20_%d  Celsius:%f", deviceIndex + 1, tempCels);
   char msgBuffer[8];
+  JsonObject jsonESP = ensureEspDataObject();
   jsonESP["DS18B20_" + String(deviceIndex + 1)] = dtostrf(tempCels, 4, 2, msgBuffer);
 }
 
