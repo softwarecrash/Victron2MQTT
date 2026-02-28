@@ -52,6 +52,18 @@ byte wsReqInvNum = 1;
 char mqtt_server[80];
 char mqttClientId[80];
 uint32_t bootcount = 0;
+bool veFramePending = false;
+bool tempStateDirty = false;
+uint32_t veSerialOverflowCount = 0;
+
+struct BufferedTemperatureState
+{
+  bool valid = false;
+  bool dirty = false;
+  int32_t raw = DEVICE_DISCONNECTED_RAW;
+};
+
+BufferedTemperatureState bufferedTemperatures[MAX_TEMPERATURE_SENSORS];
 
 WiFiClient client;
 Settings _settings;
@@ -162,12 +174,12 @@ static String buildTopicPath(const String &base, const char *segment)
   return base + "/" + cleanSeg;
 }
 
-static bool jsonVariantToString(JsonVariant value, String &out)
+static bool jsonVariantToString(JsonVariantConst value, String &out)
 {
   out = "";
   if (value.isNull())
     return false;
-  if (value.is<JsonObject>() || value.is<JsonArray>())
+  if (value.is<JsonObjectConst>() || value.is<JsonArrayConst>())
   {
     serializeJson(value, out);
     return true;
@@ -225,7 +237,8 @@ static bool isKnownEspDataKey(const char *key)
       "Free_Heap",
       "json_size",
       "WS_Clients",
-      "Runtime"};
+      "Runtime",
+      "VE_RX_Overflow"};
 
   for (size_t i = 0; i < sizeof(knownKeys) / sizeof(knownKeys[0]); i++)
   {
@@ -271,6 +284,67 @@ static void pruneUnknownMqttKeys()
     if (!removed)
       break;
   }
+}
+
+static void applyBufferedTemperatureData(JsonObject jsonESP)
+{
+  if (!tempStateDirty)
+    return;
+
+  tempStateDirty = false;
+  for (size_t i = 0; i < MAX_TEMPERATURE_SENSORS; i++)
+  {
+    BufferedTemperatureState &state = bufferedTemperatures[i];
+    if (!state.dirty)
+      continue;
+
+    state.dirty = false;
+
+    char key[16];
+    snprintf(key, sizeof(key), "DS18B20_%u", (unsigned)(i + 1));
+    if (!state.valid)
+    {
+      jsonESP.remove(key);
+      continue;
+    }
+
+    char msgBuffer[8];
+    const float tempCels = tempSens.rawToCelsius(state.raw);
+    jsonESP[key] = dtostrf(tempCels, 4, 2, msgBuffer);
+  }
+}
+
+static bool publishJsonAsFlatTopics(const String &baseTopic, JsonVariantConst value);
+
+static bool publishObjectAsFlatTopics(const String &baseTopic, JsonObjectConst object)
+{
+  for (JsonPairConst i : object)
+  {
+    const String cleanKey = sanitizeMqttSegment(i.key().c_str());
+    if (cleanKey.length() == 0)
+    {
+      writeLog("[MQTT] drop invalid key '%s'", i.key().c_str());
+      continue;
+    }
+
+    const String childTopic = buildTopicPath(baseTopic, cleanKey.c_str());
+    if (!publishJsonAsFlatTopics(childTopic, i.value()))
+      return false;
+  }
+
+  return true;
+}
+
+static bool publishJsonAsFlatTopics(const String &baseTopic, JsonVariantConst value)
+{
+  if (value.is<JsonObjectConst>())
+    return publishObjectAsFlatTopics(baseTopic, value.as<JsonObjectConst>());
+
+  String payload;
+  if (!jsonVariantToString(value, payload))
+    return false;
+
+  return mqttclient.publish(baseTopic.c_str(), payload.c_str());
 }
 
 //----------------------------------------------------------------------
@@ -391,15 +465,34 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 
 void ReadVEData()
 {
+  size_t drained = 0;
   while (veSerial.available())
   {
     myve.rxData(veSerial.read());
-    esp_yield();
+    drained++;
+    if ((drained & 0x1F) == 0)
+      esp_yield();
   }
-  //    if (veSerial.available())
-  // {
-  //   myve.rxData(veSerial.read());
-  // }
+
+  if (veSerial.overflow())
+  {
+    veSerialOverflowCount++;
+    writeLog("[VE] serial rx overflow #%lu", (unsigned long)veSerialOverflowCount);
+  }
+}
+
+void queueVeDataProcessing()
+{
+  veFramePending = true;
+}
+
+void processPendingVeData()
+{
+  if (!veFramePending || dataProzessing)
+    return;
+
+  veFramePending = false;
+  prozessData();
 }
 
 bool remoteControl(bool sw)
@@ -479,10 +572,10 @@ void setup()
 
   haAutoDiscTrigger = _settings.get.haDiscovery();
   WiFi.persistent(true); // fix wifi save bug
-  veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX /*, MYPORT_TX, false*/);
+  veSerial.begin(VICTRON_BAUD, SWSERIAL_8N1, MYPORT_RX, -1, false, VE_RX_BUFFER, VE_ISR_BUFFER);
   veSerial.flush();
   veSerial.enableRxGPIOPullUp(false);
-  myve.callback(prozessData);
+  myve.callback(queueVeDataProcessing);
 
   String clientIdName = sanitizeMqttSegment(_settings.get.deviceName());
   if (clientIdName.length() == 0)
@@ -869,6 +962,7 @@ server.on(
     jsonESP["sw_version"] = SOFTWARE_VERSION;
     tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
     tempSens.onTemperatureChange(handleTemperatureChange);
+    tempSens.onDeviceDisconnected(handleTemperatureDisconnect);
   }
   analogWrite(LED_PIN, 255);
   RTCmem->bootcount = 0;
@@ -879,7 +973,6 @@ server.on(
 void loop()
 {
   MDNS.update();
-  tempSens.update();
   if (Update.isRunning())
   {
     workerCanRun = false;
@@ -887,18 +980,21 @@ void loop()
   if (workerCanRun)
   {
     ReadVEData();
+    tempSens.update();
+    applyBufferedTemperatureData(ensureEspDataObject());
+    processPendingVeData();
 
     // Make sure wifi is in the right mode
     if (WiFi.status() == WL_CONNECTED)
     { // No use going to next step unless WIFI is up and running.
-      if (millis() - mqtttimer > (_settings.data.mqttRefresh * 1000) || mqtttimer == 0)
+      mqttclient.loop(); // Check if we have something to read from MQTT
+
+      if (millis() - mqtttimer > (_settings.get.mqttRefresh() * 1000UL) || mqtttimer == 0)
       {
         writeLog("<MQTT> Data Send...");
         sendtoMQTT(); // Update data to MQTT server if we should
         mqtttimer = millis();
       }
-
-      mqttclient.loop(); // Check if we have something to read from MQTT
     }
     notificationLED(); // notification LED routine
     checkWiFiAndMaybeReboot();
@@ -912,7 +1008,12 @@ void loop()
       }
     }
     JsonObject jsonESP = ensureEspDataObject();
+    Json["Device_name"] = _settings.get.deviceName();
+    Json["Device_connection"] = !myve.veError;
+    Json["Remote_Control_State"] = remoteControlState;
+    jsonESP["IP"] = WiFi.localIP().toString();
     jsonESP["Wifi_RSSI"] = WiFi.RSSI();
+    jsonESP["VE_RX_Overflow"] = veSerialOverflowCount;
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))
@@ -936,12 +1037,16 @@ bool getJsonData()
   pruneUnknownMqttKeys();
   JsonObject jsonESP = ensureEspDataObject();
   Json["Device_name"] = _settings.get.deviceName();
+  applyBufferedTemperatureData(jsonESP);
+  jsonESP["IP"] = WiFi.localIP().toString();
+  jsonESP["sw_version"] = SOFTWARE_VERSION;
   jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
   jsonESP["Wifi_RSSI"] = WiFi.RSSI();
   jsonESP["Free_Heap"] = ESP.getFreeHeap();
   jsonESP["json_size"] = measureJson(Json);
   jsonESP["WS_Clients"] = ws.count();
   jsonESP["Runtime"] = millis() / 1000;
+  jsonESP["VE_RX_Overflow"] = veSerialOverflowCount;
   writeLog("VE data: %d:%d:%d", myve.veEnd, myve.veErrorCount, myve.veError);
   for (size_t i = 0; i < myve.veEnd; i++)
   {
@@ -1096,17 +1201,26 @@ bool sendtoMQTT()
   {
     return false;
   }
+  Json["Device_name"] = _settings.get.deviceName();
+  Json["Device_connection"] = !myve.veError;
+  Json["Remote_Control_State"] = remoteControlState;
+  JsonObject jsonESP = ensureEspDataObject();
+  applyBufferedTemperatureData(jsonESP);
+  jsonESP["IP"] = WiFi.localIP().toString();
+  jsonESP["sw_version"] = SOFTWARE_VERSION;
+  jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
+  jsonESP["Wifi_RSSI"] = WiFi.RSSI();
+  jsonESP["Free_Heap"] = ESP.getFreeHeap();
+  jsonESP["WS_Clients"] = ws.count();
+  jsonESP["Runtime"] = millis() / 1000;
+  jsonESP["VE_RX_Overflow"] = veSerialOverflowCount;
+  jsonESP["json_size"] = measureJson(Json);
   pruneUnknownMqttKeys();
 
   const String aliveTopic = buildTopicPath(topic, "Alive");
-  const String wifiTopic = buildTopicPath(topic, "Wifi_RSSI");
-  const String rcStateTopic = buildTopicPath(topic, "Remote_Control_State");
-  const String wifiPayload = String(WiFi.RSSI());
 
   //-----------------------------------------------------
   mqttclient.publish(aliveTopic.c_str(), "true", true); // LWT online message must be retained!
-  mqttclient.publish(wifiTopic.c_str(), wifiPayload.c_str());
-  mqttclient.publish(rcStateTopic.c_str(), remoteControlState ? "true" : "false");
 
   if (!_settings.get.mqttJson())
   {
@@ -1119,6 +1233,19 @@ bool sendtoMQTT()
         continue;
       }
 
+      if (strcmp(rootKey, "ESP_Data") == 0)
+      {
+        if (!i.value().is<JsonObject>())
+        {
+          writeLog("[MQTT] drop invalid object '%s'", rootKey);
+          continue;
+        }
+
+        if (!publishObjectAsFlatTopics(topic, i.value().as<JsonObjectConst>()))
+          return false;
+        continue;
+      }
+
       const String cleanKey = sanitizeMqttSegment(rootKey);
       if (cleanKey.length() == 0)
       {
@@ -1126,12 +1253,9 @@ bool sendtoMQTT()
         continue;
       }
 
-      String payload;
-      if (!jsonVariantToString(i.value(), payload))
-        continue;
-
-      const String valueTopic = topic + "/" + cleanKey;
-      mqttclient.publish(valueTopic.c_str(), payload.c_str());
+      const String valueTopic = buildTopicPath(topic, cleanKey.c_str());
+      if (!publishJsonAsFlatTopics(valueTopic, i.value().as<JsonVariantConst>()))
+        return false;
     }
   }
   else
@@ -1286,13 +1410,31 @@ bool sendHaDiscovery()
 
 void handleTemperatureChange(int deviceIndex, int32_t temperatureRAW)
 {
+  if (deviceIndex < 0 || deviceIndex >= MAX_TEMPERATURE_SENSORS)
+    return;
+
   float tempCels = tempSens.rawToCelsius(temperatureRAW);
   if (tempCels <= -55 || tempCels >= 125)
     return;
+
   writeLog("<DS18x> DS18B20_%d  Celsius:%f", deviceIndex + 1, tempCels);
-  char msgBuffer[8];
-  JsonObject jsonESP = ensureEspDataObject();
-  jsonESP["DS18B20_" + String(deviceIndex + 1)] = dtostrf(tempCels, 4, 2, msgBuffer);
+
+  bufferedTemperatures[deviceIndex].raw = temperatureRAW;
+  bufferedTemperatures[deviceIndex].valid = true;
+  bufferedTemperatures[deviceIndex].dirty = true;
+  tempStateDirty = true;
+}
+
+void handleTemperatureDisconnect(int deviceIndex)
+{
+  if (deviceIndex < 0 || deviceIndex >= MAX_TEMPERATURE_SENSORS)
+    return;
+
+  writeLog("<DS18x> DS18B20_%d disconnected", deviceIndex + 1);
+  bufferedTemperatures[deviceIndex].raw = DEVICE_DISCONNECTED_RAW;
+  bufferedTemperatures[deviceIndex].valid = false;
+  bufferedTemperatures[deviceIndex].dirty = true;
+  tempStateDirty = true;
 }
 
 void writeLog(const char *format, ...)

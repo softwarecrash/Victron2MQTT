@@ -8,6 +8,9 @@
 #define TEMPSENS_PIN 04 // DS18B20 Pin
 #define TIME_INTERVAL 2500 // Time interval among sensor readings [milliseconds]
 #define JSON_BUFFER 1536//2048
+#define VE_RX_BUFFER 256
+#define VE_ISR_BUFFER 2048
+#define MAX_TEMPERATURE_SENSORS 15
 
 #define FlashSize ESP.getFreeSketchSpace()
 #define ESP01
@@ -48,6 +51,10 @@ bool getJsonData();
 
 void notifyClients();
 
+void queueVeDataProcessing();
+
+void processPendingVeData();
+
 void mqttCallback(char *top, byte *payload, unsigned int length);
 
 bool sendtoMQTT();
@@ -68,6 +75,8 @@ bool  sendHaDiscovery();
  * @brief function for ext. TempSensors
  */
 void handleTemperatureChange(int deviceIndex, int32_t temperatureRAW);
+
+void handleTemperatureDisconnect(int deviceIndex);
 
 bool remoteControl(bool sw);
 
