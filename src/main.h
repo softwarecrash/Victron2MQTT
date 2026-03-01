@@ -11,6 +11,8 @@
 #define VE_RX_BUFFER 256
 #define VE_ISR_BUFFER 2048
 #define MAX_TEMPERATURE_SENSORS 15
+#define WIFI_MIN_OPERATIONAL_RSSI_DBM -85
+#define WIFI_RSSI_HYSTERESIS_DB 5
 
 #define FlashSize ESP.getFreeSketchSpace()
 #define ESP01

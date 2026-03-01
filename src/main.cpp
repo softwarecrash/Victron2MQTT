@@ -55,6 +55,8 @@ uint32_t bootcount = 0;
 bool veFramePending = false;
 bool tempStateDirty = false;
 uint32_t veSerialOverflowCount = 0;
+bool wifiRssiWeak = false;
+unsigned long wifiRssiLogTimer = 0;
 
 struct BufferedTemperatureState
 {
@@ -90,6 +92,7 @@ static uint8_t g_retries = 0;
 
 static const uint32_t WIFI_RECONNECT_INTERVAL_MS = 15UL * 1000UL;
 static const uint32_t WIFI_FORCE_REBOOT_MS = 5UL * 60UL * 1000UL;
+static const uint32_t WIFI_RSSI_LOG_INTERVAL_MS = 60UL * 1000UL;
 
 static String sanitizeMqttBaseTopic(const String &raw)
 {
@@ -238,7 +241,9 @@ static bool isKnownEspDataKey(const char *key)
       "json_size",
       "WS_Clients",
       "Runtime",
-      "VE_RX_Overflow"};
+      "VE_RX_Overflow",
+      "Wifi_RSSI_Min",
+      "Wifi_RSSI_Weak"};
 
   for (size_t i = 0; i < sizeof(knownKeys) / sizeof(knownKeys[0]); i++)
   {
@@ -312,6 +317,72 @@ static void applyBufferedTemperatureData(JsonObject jsonESP)
     const float tempCels = tempSens.rawToCelsius(state.raw);
     jsonESP[key] = dtostrf(tempCels, 4, 2, msgBuffer);
   }
+}
+
+static void updateWifiRssiState()
+{
+  if (WiFi.status() != WL_CONNECTED || WiFi.localIP()[0] == 0)
+  {
+    wifiRssiWeak = false;
+    return;
+  }
+
+  const long rssi = WiFi.RSSI();
+  const bool previousState = wifiRssiWeak;
+
+  if (rssi <= WIFI_MIN_OPERATIONAL_RSSI_DBM)
+    wifiRssiWeak = true;
+  else if (rssi >= (WIFI_MIN_OPERATIONAL_RSSI_DBM + WIFI_RSSI_HYSTERESIS_DB))
+    wifiRssiWeak = false;
+
+  if (wifiRssiWeak != previousState)
+  {
+    writeLog("[wifi] RSSI %ld dBm -> %s (threshold %d dBm)", rssi, wifiRssiWeak ? "weak" : "ok", WIFI_MIN_OPERATIONAL_RSSI_DBM);
+    wifiRssiLogTimer = millis();
+  }
+}
+
+static bool wifiAllowsNetworkTraffic()
+{
+  updateWifiRssiState();
+
+  if (!wifiRssiWeak)
+    return true;
+
+  const unsigned long now = millis();
+  if (wifiRssiLogTimer == 0 || now - wifiRssiLogTimer >= WIFI_RSSI_LOG_INTERVAL_MS)
+  {
+    writeLog("[wifi] RSSI %ld dBm below threshold %d dBm, suppressing MQTT traffic", WiFi.RSSI(), WIFI_MIN_OPERATIONAL_RSSI_DBM);
+    wifiRssiLogTimer = now;
+  }
+
+  return false;
+}
+
+static JsonObject refreshRuntimeJsonState(bool updateJsonSize = true)
+{
+  updateWifiRssiState();
+  Json["Device_name"] = _settings.get.deviceName();
+  Json["Device_connection"] = !myve.veError;
+  Json["Remote_Control_State"] = remoteControlState;
+
+  JsonObject jsonESP = ensureEspDataObject();
+  applyBufferedTemperatureData(jsonESP);
+  jsonESP["IP"] = WiFi.localIP().toString();
+  jsonESP["sw_version"] = SOFTWARE_VERSION;
+  jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
+  jsonESP["Wifi_RSSI"] = WiFi.RSSI();
+  jsonESP["Free_Heap"] = ESP.getFreeHeap();
+  jsonESP["WS_Clients"] = ws.count();
+  jsonESP["Runtime"] = millis() / 1000;
+  jsonESP["VE_RX_Overflow"] = veSerialOverflowCount;
+  jsonESP["Wifi_RSSI_Min"] = WIFI_MIN_OPERATIONAL_RSSI_DBM;
+  jsonESP["Wifi_RSSI_Weak"] = wifiRssiWeak;
+
+  if (updateJsonSize)
+    jsonESP["json_size"] = measureJson(Json);
+
+  return jsonESP;
 }
 
 static bool publishJsonAsFlatTopics(const String &baseTopic, JsonVariantConst value);
@@ -518,6 +589,7 @@ void checkWiFiAndMaybeReboot()
 
   if (WiFi.status() == WL_CONNECTED && WiFi.localIP()[0] != 0) {
     lastWifiOK = now;
+    updateWifiRssiState();
     return;
   }
 
@@ -989,7 +1061,7 @@ void loop()
     { // No use going to next step unless WIFI is up and running.
       mqttclient.loop(); // Check if we have something to read from MQTT
 
-      if (millis() - mqtttimer > (_settings.get.mqttRefresh() * 1000UL) || mqtttimer == 0)
+      if (wifiAllowsNetworkTraffic() && (millis() - mqtttimer > (_settings.get.mqttRefresh() * 1000UL) || mqtttimer == 0))
       {
         writeLog("<MQTT> Data Send...");
         sendtoMQTT(); // Update data to MQTT server if we should
@@ -999,7 +1071,7 @@ void loop()
     notificationLED(); // notification LED routine
     checkWiFiAndMaybeReboot();
 
-    if ((haDiscTrigger || _settings.get.haDiscovery()) && measureJson(Json) > jsonSize)
+    if ((haDiscTrigger || _settings.get.haDiscovery()) && !wifiRssiWeak && measureJson(Json) > jsonSize)
     {
       if (sendHaDiscovery())
       {
@@ -1007,13 +1079,7 @@ void loop()
         jsonSize = measureJson(Json);
       }
     }
-    JsonObject jsonESP = ensureEspDataObject();
-    Json["Device_name"] = _settings.get.deviceName();
-    Json["Device_connection"] = !myve.veError;
-    Json["Remote_Control_State"] = remoteControlState;
-    jsonESP["IP"] = WiFi.localIP().toString();
-    jsonESP["Wifi_RSSI"] = WiFi.RSSI();
-    jsonESP["VE_RX_Overflow"] = veSerialOverflowCount;
+    refreshRuntimeJsonState(false);
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))
@@ -1035,18 +1101,7 @@ void prozessData()
 bool getJsonData()
 {
   pruneUnknownMqttKeys();
-  JsonObject jsonESP = ensureEspDataObject();
-  Json["Device_name"] = _settings.get.deviceName();
-  applyBufferedTemperatureData(jsonESP);
-  jsonESP["IP"] = WiFi.localIP().toString();
-  jsonESP["sw_version"] = SOFTWARE_VERSION;
-  jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
-  jsonESP["Wifi_RSSI"] = WiFi.RSSI();
-  jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  jsonESP["json_size"] = measureJson(Json);
-  jsonESP["WS_Clients"] = ws.count();
-  jsonESP["Runtime"] = millis() / 1000;
-  jsonESP["VE_RX_Overflow"] = veSerialOverflowCount;
+  refreshRuntimeJsonState();
   writeLog("VE data: %d:%d:%d", myve.veEnd, myve.veErrorCount, myve.veError);
   for (size_t i = 0; i < myve.veEnd; i++)
   {
@@ -1163,6 +1218,9 @@ bool connectMQTT()
 {
   if (!mqttclient.connected())
   {
+    if (!wifiAllowsNetworkTraffic())
+      return false;
+
     const String aliveTopic = buildTopicPath(topic, "Alive");
     if (mqttclient.connect(mqttClientId, _settings.get.mqttUser(), _settings.get.mqttPassword(), aliveTopic.c_str(), 0, true, "false", true))
     {
@@ -1201,20 +1259,7 @@ bool sendtoMQTT()
   {
     return false;
   }
-  Json["Device_name"] = _settings.get.deviceName();
-  Json["Device_connection"] = !myve.veError;
-  Json["Remote_Control_State"] = remoteControlState;
-  JsonObject jsonESP = ensureEspDataObject();
-  applyBufferedTemperatureData(jsonESP);
-  jsonESP["IP"] = WiFi.localIP().toString();
-  jsonESP["sw_version"] = SOFTWARE_VERSION;
-  jsonESP["ESP_VCC"] = (ESP.getVcc() / 1000.0) + 0.3;
-  jsonESP["Wifi_RSSI"] = WiFi.RSSI();
-  jsonESP["Free_Heap"] = ESP.getFreeHeap();
-  jsonESP["WS_Clients"] = ws.count();
-  jsonESP["Runtime"] = millis() / 1000;
-  jsonESP["VE_RX_Overflow"] = veSerialOverflowCount;
-  jsonESP["json_size"] = measureJson(Json);
+  refreshRuntimeJsonState();
   pruneUnknownMqttKeys();
 
   const String aliveTopic = buildTopicPath(topic, "Alive");
@@ -1230,19 +1275,6 @@ bool sendtoMQTT()
       if (!isKnownRootKey(rootKey))
       {
         writeLog("[MQTT] drop unknown key '%s'", rootKey);
-        continue;
-      }
-
-      if (strcmp(rootKey, "ESP_Data") == 0)
-      {
-        if (!i.value().is<JsonObject>())
-        {
-          writeLog("[MQTT] drop invalid object '%s'", rootKey);
-          continue;
-        }
-
-        if (!publishObjectAsFlatTopics(topic, i.value().as<JsonObjectConst>()))
-          return false;
         continue;
       }
 
