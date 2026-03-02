@@ -66,7 +66,7 @@
     var websocket;
     var dataRows = document.getElementsByClassName("dR");
     var dataFields = document.getElementsByClassName("dF");
-    var wifiSvg = '<svg class="wifi-symbol" viewBox="0 15 64 64" xmlns="http://www.w3.org/2000/svg" width="32" height="32"><title id="wifiTitle">WiFi-Signal</title><path id="level5" d="M8 32 A33 32 0 0 1 56 32" stroke="black" stroke-width="4" fill="none" /><path id="level4" d="M14 38 A26 26 0 0 1 50 38" stroke="black" stroke-width="4" fill="none" /><path id="level3" d="M20 44 A18 20 0 0 1 44 44" stroke="black" stroke-width="4" fill="none" /><path id="level2" d="M26 50 A10 14 0 0 1 38 50" stroke="black" stroke-width="4" fill="none"/><circle id="level1" cx="32" cy="56" r="3" fill="black"/></svg>';
+    var wifiSvg = '<svg class="wifi-symbol" viewBox="0 15 64 64" xmlns="http://www.w3.org/2000/svg" width="32" height="32"><title id="wifiTitle">WiFi-Signal unbekannt</title><path id="level5" d="M8 32 A33 32 0 0 1 56 32" stroke="#b8bec7" stroke-width="4" fill="none" /><path id="level4" d="M14 38 A26 26 0 0 1 50 38" stroke="#b8bec7" stroke-width="4" fill="none" /><path id="level3" d="M20 44 A18 20 0 0 1 44 44" stroke="#b8bec7" stroke-width="4" fill="none" /><path id="level2" d="M26 50 A10 14 0 0 1 38 50" stroke="#b8bec7" stroke-width="4" fill="none"/><circle id="level1" cx="32" cy="56" r="3" fill="#b8bec7"/></svg>';
 $( document ).ready(function() {
     initWebSocket();
     initButton();
@@ -245,8 +245,8 @@ function onMessage(event) {
   if (vcc !== undefined && vcc < 2.6) showOrHide('vcc_alert', true);
   else showOrHide('vcc_alert', false);
 
-  var rssi = safe(data, 'ESP_Data.Wifi_RSSI');
-  if (rssi !== undefined && typeof setWiFiSignal === 'function') setWiFiSignal(rssi);
+  var rssi = safe(data, 'ESP_Data.Wifi_RSSI', safe(data, 'Wifi_RSSI'));
+  if (typeof setWiFiSignal === 'function') setWiFiSignal(rssi);
 
   var rows = document.querySelectorAll ? document.querySelectorAll('.dR') : [];
   for (var i = 0; i < rows.length; i++) {
@@ -279,11 +279,26 @@ function onMessage(event) {
   function setWiFiSignal(rssi) {
     const lv = ['level1','level2','level3','level4','level5'],
           c = ['red','orange','gold','yellowgreen','green'],
-          p = Math.max(0, Math.min(100, Math.round((rssi - minRSSI) * 100 / (maxRSSI - minRSSI)))),
+          idle = '#b8bec7';
+
+    const svg = document.querySelector(".wifi-symbol");
+    if (rssi === undefined || rssi === null || Number.isNaN(Number(rssi))) {
+      if (svg) {
+        const title = svg.querySelector("title");
+        if (title) title.textContent = "WiFi-Signal unbekannt";
+      }
+      lv.forEach((id) => {
+        const e = document.getElementById(id);
+        if (e) (e.tagName === "circle" ? e.setAttribute("fill", idle)
+                                       : e.setAttribute("stroke", idle));
+      });
+      return;
+    }
+
+    const p = Math.max(0, Math.min(100, Math.round((Number(rssi) - minRSSI) * 100 / (maxRSSI - minRSSI)))),
           lvl = Math.floor(p / 25),
           col = c[Math.min(lvl, 4)];
 
-    const svg = document.querySelector(".wifi-symbol");
     if (svg) {
       const title = svg.querySelector("title");
       if (title) title.textContent = p + "%% Strength";
