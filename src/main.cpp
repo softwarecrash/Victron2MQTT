@@ -60,10 +60,16 @@ struct BufferedTemperatureState
 {
   bool valid = false;
   bool dirty = false;
+  bool pending = false;
   int32_t raw = DEVICE_DISCONNECTED_RAW;
+  int32_t pendingRaw = DEVICE_DISCONNECTED_RAW;
 };
 
 BufferedTemperatureState bufferedTemperatures[MAX_TEMPERATURE_SENSORS];
+
+static constexpr int32_t DS18_GLITCH_DELTA_RAW = 384; // 3.0 C
+static constexpr int32_t DS18_CONFIRM_DELTA_RAW = 96; // 0.75 C
+static constexpr int32_t DS18_POWER_ON_RAW = 10880;   // 85.0 C
 
 WiFiClient client;
 Settings _settings;
@@ -172,6 +178,15 @@ static String buildTopicPath(const String &base, const char *segment)
   if (cleanSeg.length() == 0)
     return base;
   return base + "/" + cleanSeg;
+}
+
+static bool buildHaDiscoveryTopic(char *buffer, size_t bufferSize, const char *component, const char *objectId)
+{
+  if (!buffer || bufferSize == 0 || !component || !objectId || objectId[0] == '\0')
+    return false;
+
+  const int written = snprintf(buffer, bufferSize, "homeassistant/%s/%s/%s/config", component, mqttClientId, objectId);
+  return written > 0 && written < (int)bufferSize;
 }
 
 static bool jsonVariantToString(JsonVariantConst value, String &out)
@@ -332,6 +347,44 @@ static void applyBufferedTemperatureData()
     setEspDataValue(key, msgBuffer);
     Json[key] = msgBuffer;
   }
+}
+
+static int32_t ds18RawDelta(int32_t a, int32_t b)
+{
+  return (a > b) ? (a - b) : (b - a);
+}
+
+static bool isValidDs18TemperatureRaw(int32_t temperatureRAW)
+{
+  return temperatureRAW >= (-55 * 128) && temperatureRAW <= (125 * 128);
+}
+
+static void publishAcceptedTemperatureSample(int deviceIndex, int32_t temperatureRAW)
+{
+  BufferedTemperatureState &state = bufferedTemperatures[deviceIndex];
+  if (state.valid && state.raw == temperatureRAW)
+    return;
+
+  const float tempCels = tempSens.rawToCelsius(temperatureRAW);
+  writeLog("<DS18x> DS18B20_%d Celsius:%.2f", deviceIndex + 1, tempCels);
+
+  state.raw = temperatureRAW;
+  state.valid = true;
+  state.dirty = true;
+  tempStateDirty = true;
+}
+
+static void holdSuspiciousTemperatureSample(int deviceIndex, int32_t temperatureRAW)
+{
+  BufferedTemperatureState &state = bufferedTemperatures[deviceIndex];
+  if (state.pending && state.pendingRaw == temperatureRAW)
+    return;
+
+  const float tempCels = tempSens.rawToCelsius(temperatureRAW);
+  writeLog("<DS18x> DS18B20_%d hold suspicious sample:%.2f", deviceIndex + 1, tempCels);
+
+  state.pending = true;
+  state.pendingRaw = temperatureRAW;
 }
 
 static bool publishJsonAsFlatTopics(const String &baseTopic, JsonVariantConst value);
@@ -1021,7 +1074,7 @@ server.on(
     setEspDataValue("IP", WiFi.localIP().toString());
     setEspDataValue("sw_version", SOFTWARE_VERSION);
     tempSens.begin(NonBlockingDallas::resolution_12, TIME_INTERVAL);
-    tempSens.onTemperatureChange(handleTemperatureChange);
+    tempSens.onIntervalElapsed(handleTemperatureSample);
     tempSens.onDeviceDisconnected(handleTemperatureDisconnect);
   }
   analogWrite(LED_PIN, 255);
@@ -1416,8 +1469,7 @@ bool sendHaDiscovery()
     haPayLoad += haDeviceDescription;
     haPayLoad += "}";
 
-    const int written = snprintf(topBuff, sizeof(topBuff), "homeassistant/sensor/%s/%s/config", topic.c_str(), cleanStateName.c_str());
-    if (written <= 0 || written >= (int)sizeof(topBuff))
+    if (!buildHaDiscoveryTopic(topBuff, sizeof(topBuff), "sensor", cleanStateName.c_str()))
     {
       writeLog("[MQTT] HA sensor topic too long: %s", cleanStateName.c_str());
       continue;
@@ -1455,8 +1507,7 @@ bool sendHaDiscovery()
     haPayLoad += haDeviceDescription;
     haPayLoad += "}";
 
-    const int written = snprintf(topBuff, sizeof(topBuff), "homeassistant/sensor/%s/%s/config", topic.c_str(), cleanStateName.c_str());
-    if (written <= 0 || written >= (int)sizeof(topBuff))
+    if (!buildHaDiscoveryTopic(topBuff, sizeof(topBuff), "sensor", cleanStateName.c_str()))
     {
       writeLog("[MQTT] HA sensor topic too long: %s", cleanStateName.c_str());
       continue;
@@ -1487,8 +1538,7 @@ bool sendHaDiscovery()
 
   haPayLoad += haDeviceDescription;
   haPayLoad += "}";
-  const int switchWritten = snprintf(topBuff, sizeof(topBuff), "homeassistant/switch/%s/%s/config", topic.c_str(), "Remote_Control");
-  if (switchWritten <= 0 || switchWritten >= (int)sizeof(topBuff))
+  if (!buildHaDiscoveryTopic(topBuff, sizeof(topBuff), "switch", "Remote_Control"))
   {
     writeLog("[MQTT] HA switch topic too long");
     return false;
@@ -1504,21 +1554,41 @@ bool sendHaDiscovery()
   return true;
 }
 
-void handleTemperatureChange(int deviceIndex, int32_t temperatureRAW)
+void handleTemperatureSample(int deviceIndex, int32_t temperatureRAW)
 {
   if (deviceIndex < 0 || deviceIndex >= MAX_TEMPERATURE_SENSORS)
     return;
 
-  float tempCels = tempSens.rawToCelsius(temperatureRAW);
-  if (tempCels <= -55 || tempCels >= 125)
+  if (!isValidDs18TemperatureRaw(temperatureRAW))
     return;
 
-  writeLog("<DS18x> DS18B20_%d  Celsius:%.2f", deviceIndex + 1, tempCels);
+  BufferedTemperatureState &state = bufferedTemperatures[deviceIndex];
 
-  bufferedTemperatures[deviceIndex].raw = temperatureRAW;
-  bufferedTemperatures[deviceIndex].valid = true;
-  bufferedTemperatures[deviceIndex].dirty = true;
-  tempStateDirty = true;
+  if (state.pending)
+  {
+    if (ds18RawDelta(state.pendingRaw, temperatureRAW) <= DS18_CONFIRM_DELTA_RAW)
+    {
+      state.pending = false;
+      publishAcceptedTemperatureSample(deviceIndex, temperatureRAW);
+      return;
+    }
+
+    state.pending = false;
+  }
+
+  if (!state.valid && temperatureRAW == DS18_POWER_ON_RAW)
+  {
+    holdSuspiciousTemperatureSample(deviceIndex, temperatureRAW);
+    return;
+  }
+
+  if (state.valid && ds18RawDelta(state.raw, temperatureRAW) >= DS18_GLITCH_DELTA_RAW)
+  {
+    holdSuspiciousTemperatureSample(deviceIndex, temperatureRAW);
+    return;
+  }
+
+  publishAcceptedTemperatureSample(deviceIndex, temperatureRAW);
 }
 
 void handleTemperatureDisconnect(int deviceIndex)
@@ -1530,6 +1600,8 @@ void handleTemperatureDisconnect(int deviceIndex)
   bufferedTemperatures[deviceIndex].raw = DEVICE_DISCONNECTED_RAW;
   bufferedTemperatures[deviceIndex].valid = false;
   bufferedTemperatures[deviceIndex].dirty = true;
+  bufferedTemperatures[deviceIndex].pending = false;
+  bufferedTemperatures[deviceIndex].pendingRaw = DEVICE_DISCONNECTED_RAW;
   tempStateDirty = true;
 }
 

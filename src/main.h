@@ -74,7 +74,7 @@ bool  sendHaDiscovery();
 /**
  * @brief function for ext. TempSensors
  */
-void handleTemperatureChange(int deviceIndex, int32_t temperatureRAW);
+void handleTemperatureSample(int deviceIndex, int32_t temperatureRAW);
 
 void handleTemperatureDisconnect(int deviceIndex);
 
