@@ -62,8 +62,9 @@
 </div>
 
 <script>
-    var gateway = `ws://${window.location.hostname}/ws`;
+    var gateway = `ws://${window.location.host}/ws`;
     var websocket;
+    var wsCheckInterval;
     var dataRows = document.getElementsByClassName("dR");
     var dataFields = document.getElementsByClassName("dF");
     var wifiSvg = '<svg class="wifi-symbol" viewBox="0 15 64 64" xmlns="http://www.w3.org/2000/svg" width="32" height="32"><title id="wifiTitle">WiFi-Signal unbekannt</title><path id="level5" d="M8 32 A33 32 0 0 1 56 32" stroke="#b8bec7" stroke-width="4" fill="none" /><path id="level4" d="M14 38 A26 26 0 0 1 50 38" stroke="#b8bec7" stroke-width="4" fill="none" /><path id="level3" d="M20 44 A18 20 0 0 1 44 44" stroke="#b8bec7" stroke-width="4" fill="none" /><path id="level2" d="M26 50 A10 14 0 0 1 38 50" stroke="#b8bec7" stroke-width="4" fill="none"/><circle id="level1" cx="32" cy="56" r="3" fill="#b8bec7"/></svg>';
@@ -81,10 +82,17 @@ $( document ).ready(function() {
     }
     function onOpen(event) {
         console.log('Connection opened');
-        setInterval(checkWS, 5000);
+        if (wsCheckInterval) {
+            clearInterval(wsCheckInterval);
+        }
+        wsCheckInterval = setInterval(checkWS, 5000);
     }
     function onClose(event) {
         console.log('Connection closed');
+        if (wsCheckInterval) {
+            clearInterval(wsCheckInterval);
+            wsCheckInterval = null;
+        }
         setTimeout(initWebSocket, 3500);
     }
     function onError(event) {
@@ -262,14 +270,16 @@ function onMessage(event) {
         let switchVal;
         if (document.getElementById('remotecontrol').checked) { switchVal = 'remotecontrol_on' }
         else { switchVal = 'remotecontrol_off' }
-        websocket.send(switchVal);
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            websocket.send(switchVal);
+        }
     }
     function onLoad(event) {
         initWebSocket();
     }
 
     function checkWS() {
-        if(websocket.readyState !== WebSocket.CLOSED)
+        if(websocket && websocket.readyState === WebSocket.OPEN)
         {
             websocket.send("A9");
         }

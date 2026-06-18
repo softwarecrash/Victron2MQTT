@@ -27,7 +27,7 @@ def ensure_module_version(package_name, required_version):
     ])
 
 
-ensure_module_version("minify_html", "0.15.0")
+ensure_module_version("minify_html", "0.18.1")
 import minify_html
 
 filePath = 'src/webpages/'
