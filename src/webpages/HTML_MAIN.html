@@ -216,11 +216,11 @@ function onMessage(event) {
     }
     var v = Math.max(0, Math.min(100, Number(data.SOC)));
     if (bar.parentElement) bar.parentElement.style.display = '';
-    bar.innerHTML = v + '%';
+    bar.innerHTML = v + '%%';
     if (window.$ && window.$('#SOCbar').width) {
-      $('#SOCbar').width(v + '%').attr('aria-valuenow', v);
+      $('#SOCbar').width(v + '%%').attr('aria-valuenow', v);
     } else {
-      bar.style.width = v + '%';
+      bar.style.width = v + '%%';
       bar.setAttribute('aria-valuenow', String(v));
     }
   })();
