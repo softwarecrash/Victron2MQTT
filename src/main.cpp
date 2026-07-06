@@ -483,8 +483,9 @@ static uint32_t _wsLast = 0;
 
 void notifyClients()
 {
-  if (!ws.count())
+  if (wsClient == nullptr || !wsClient->canSend())
     return;
+
   uint32_t now = millis();
   if (now - _wsLast < 250)
     return;
@@ -526,7 +527,7 @@ deserializeJson(Json, FPSTR(TEST_WS_JSON)); */
     return;
 
   memcpy(buf->get(), payload.c_str(), len);
-  ws.textAll(buf);
+  wsClient->text(buf);
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -539,13 +540,13 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   buf[len] = '\0';
 
   String msg(buf.get());
-  if (msg != "A9")
-  {
-    if (msg == "remotecontrol_on")
-      remoteControl(true);
-    else if (msg == "remotecontrol_off")
-      remoteControl(false);
-  }
+  if (msg == "ping" || msg == "A9")
+    return;
+
+  if (msg == "remotecontrol_on")
+    remoteControl(true);
+  else if (msg == "remotecontrol_off")
+    remoteControl(false);
 }
 
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
@@ -554,6 +555,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     wsClient = client;
+    client->setCloseClientOnQueueFull(false);
     writeLog("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     if (!dataProzessing /*&& wsClient != nullptr && wsClient->canSend()*/)
       notifyClients();
@@ -1066,6 +1068,14 @@ server.on(
 
     ws.onEvent(onEvent);
     server.addHandler(&ws);
+    server.on("/ws", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+                if (request->hasHeader("Sec-WebSocket-Key") && request->hasHeader("Sec-WebSocket-Version"))
+                {
+                  ws.handleRequest(request);
+                  return;
+                }
+                request->send(426, "text/plain", "WebSocket upgrade required"); });
 
     webSerial.begin(&server);
 

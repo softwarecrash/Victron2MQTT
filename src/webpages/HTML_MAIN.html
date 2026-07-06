@@ -82,17 +82,13 @@ $( document ).ready(function() {
     }
     function onOpen(event) {
         console.log('Connection opened');
-        if (wsCheckInterval) {
-            clearInterval(wsCheckInterval);
-        }
+        clearInterval(wsCheckInterval);
         wsCheckInterval = setInterval(checkWS, 5000);
     }
     function onClose(event) {
         console.log('Connection closed');
-        if (wsCheckInterval) {
-            clearInterval(wsCheckInterval);
-            wsCheckInterval = null;
-        }
+        clearInterval(wsCheckInterval);
+        wsCheckInterval = null;
         setTimeout(initWebSocket, 3500);
     }
     function onError(event) {
@@ -281,7 +277,7 @@ function onMessage(event) {
     function checkWS() {
         if(websocket && websocket.readyState === WebSocket.OPEN)
         {
-            websocket.send("A9");
+            websocket.send("ping");
         }
     }
 
