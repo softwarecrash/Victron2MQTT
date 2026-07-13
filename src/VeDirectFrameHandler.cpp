@@ -13,15 +13,18 @@ static constexpr char checksumTagName[] = "CHECKSUM";
 void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
 	//Serial.write(inbyte);
-	if ((inbyte == ':') && (mState != CHECKSUM))
+	const uint8_t rawByte = inbyte;
+	if ((rawByte == ':') && (mState != CHECKSUM))
 	{
 		mState = RECORD_HEX;
+		resetRawFrame();
 	}
 	if (mState != RECORD_HEX)
 	{
-		mChecksum += inbyte;
+		captureRawFrameByte(rawByte);
+		mChecksum += rawByte;
 	}
-	inbyte = toupper(inbyte);
+	inbyte = toupper(rawByte);
 
 	switch (mState)
 	{
@@ -101,9 +104,13 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 	{
 		//checksumCallback(mChecksum);
 		bool valid = mChecksum == 0;
+		const uint8_t receivedChecksum = rawByte;
+		const uint8_t checksumTotal = mChecksum;
+		const uint8_t checksumWithoutReceived = checksumTotal - receivedChecksum;
+		const uint8_t calculatedChecksum = 0 - checksumWithoutReceived;
 		mChecksum = 0;
 		mState = IDLE;
-		frameEndEvent(valid);
+		frameEndEvent(valid, receivedChecksum, calculatedChecksum, checksumTotal);
 		break;
 	}
 	case RECORD_HEX:
@@ -112,8 +119,35 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 			//hexFrameCallback();
 			mChecksum = 0;
 			mState = IDLE;
+			resetRawFrame();
 		}
 		break;
+	}
+}
+
+void VeDirectFrameHandler::resetRawFrame()
+{
+	rawFrameIndex = 0;
+	rawFrameBytes = 0;
+	rawFrameStarted = false;
+	rawFrameOverflow = false;
+}
+
+void VeDirectFrameHandler::captureRawFrameByte(uint8_t inbyte)
+{
+	if (!rawFrameStarted)
+	{
+		rawFrameStarted = true;
+	}
+
+	rawFrameBytes++;
+	if (rawFrameIndex < rawFrameLen)
+	{
+		rawFrame[rawFrameIndex++] = inbyte;
+	}
+	else
+	{
+		rawFrameOverflow = true;
 	}
 }
 
@@ -142,7 +176,7 @@ void VeDirectFrameHandler::textRxEvent(char *mName, char *mValue)
  *  If the name exists in the public buffer, the new value is copied to the public buffer.  If not, a new name/value entry
  *  is created in the public buffer.
  */
-void VeDirectFrameHandler::frameEndEvent(bool valid)
+void VeDirectFrameHandler::frameEndEvent(bool valid, uint8_t receivedChecksum, uint8_t calculatedChecksum, uint8_t checksumTotal)
 {
 	if (valid)
 	{
@@ -171,15 +205,15 @@ void VeDirectFrameHandler::frameEndEvent(bool valid)
 				}
 			}
 		}
-		writeLog("\nCRC OK");
 		veErrorCount = 0;
 		requestCallback(); // call the callback to do other things with the new data
 	} else {
 		veErrorCount++;
-		writeLog("\nCRC wrong");
+		logChecksumFailure(receivedChecksum, calculatedChecksum, checksumTotal);
 	}
 	frameIndex = 0; // reset frame
 	veError = veErrorCount < veErrorTol ? false : true; //set the crc error flag
+	resetRawFrame();
 }
 
 bool VeDirectFrameHandler::hexRxEvent(uint8_t inbyte)
@@ -190,4 +224,99 @@ bool VeDirectFrameHandler::hexRxEvent(uint8_t inbyte)
 void VeDirectFrameHandler::callback(std::function<void()> func) // callback function when finnish request
 {
 	requestCallback = func;
+}
+
+void VeDirectFrameHandler::logChecksumFailure(uint8_t receivedChecksum, uint8_t calculatedChecksum, uint8_t checksumTotal)
+{
+	const uint32_t now = millis();
+	if (lastCrcDetailLogMs != 0 && now - lastCrcDetailLogMs < crcDetailLogIntervalMs)
+	{
+		if (suppressedCrcLogCount < UINT16_MAX)
+			suppressedCrcLogCount++;
+		return;
+	}
+
+	const uint16_t suppressed = suppressedCrcLogCount;
+	suppressedCrcLogCount = 0;
+	lastCrcDetailLogMs = now;
+
+	writeLog("[VE] CRC wrong bytes=%u captured=%u truncated=%s suppressed=%u",
+			 (unsigned)rawFrameBytes,
+			 (unsigned)rawFrameIndex,
+			 rawFrameOverflow ? "yes" : "no",
+			 (unsigned)suppressed);
+	writeLog("[VE] CRC received=0x%02X calculated=0x%02X sum=0x%02X",
+			 receivedChecksum,
+			 calculatedChecksum,
+			 checksumTotal);
+	logEscapedRawFrame();
+}
+
+void VeDirectFrameHandler::logEscapedRawFrame()
+{
+	writeLog("[VE] frame escaped begin bytes=%u", (unsigned)rawFrameIndex);
+
+	char line[160];
+	size_t pos = 0;
+	size_t chunkStart = 0;
+	unsigned chunk = 0;
+	for (size_t i = 0; i < rawFrameIndex; i++)
+	{
+		char token[5];
+		size_t tokenLen = 0;
+		const uint8_t b = rawFrame[i];
+
+		switch (b)
+		{
+		case '\r':
+			token[0] = '\\'; token[1] = 'r'; tokenLen = 2;
+			break;
+		case '\n':
+			token[0] = '\\'; token[1] = 'n'; tokenLen = 2;
+			break;
+		case '\t':
+			token[0] = '\\'; token[1] = 't'; tokenLen = 2;
+			break;
+		case '\\':
+			token[0] = '\\'; token[1] = '\\'; tokenLen = 2;
+			break;
+		default:
+			if (b >= 0x20 && b <= 0x7E)
+			{
+				token[0] = (char)b;
+				tokenLen = 1;
+			}
+			else
+			{
+				snprintf(token, sizeof(token), "\\x%02X", b);
+				tokenLen = 4;
+			}
+			break;
+		}
+
+		if (pos + tokenLen >= sizeof(line))
+		{
+			line[pos] = '\0';
+			writeLog("[VE] frame escaped chunk=%u offset=%u %s",
+					 chunk++,
+					 (unsigned)chunkStart,
+					 line);
+			pos = 0;
+			chunkStart = i;
+		}
+
+		memcpy(line + pos, token, tokenLen);
+		pos += tokenLen;
+	}
+
+	if (pos > 0)
+	{
+		line[pos] = '\0';
+		writeLog("[VE] frame escaped chunk=%u offset=%u %s",
+				 chunk++,
+				 (unsigned)chunkStart,
+				 line);
+	}
+
+	writeLog("[VE] frame escaped end chunks=%u", chunk);
 }

@@ -34,6 +34,7 @@
 
 #include "html.h"          //the HTML content
 #include "htmlProzessor.h" // The html Prozessor
+#include "WebSerialPage.h"
 
 String topic = ""; // Default first part of topic. We will add device ID in setup
 
@@ -48,6 +49,7 @@ bool remoteControlState = false;
 unsigned int jsonSize = 0;
 unsigned long mqtttimer = 0;
 unsigned long RestartTimer = 0;
+unsigned long mdnsTimer = 0;
 byte wsReqInvNum = 1;
 char mqtt_server[80];
 char mqttClientId[80];
@@ -55,6 +57,7 @@ uint32_t bootcount = 0;
 bool veFramePending = false;
 bool tempStateDirty = false;
 uint32_t veSerialOverflowCount = 0;
+uint32_t lastVeSerialByteMs = 0;
 
 struct BufferedTemperatureState
 {
@@ -556,14 +559,14 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   case WS_EVT_CONNECT:
     wsClient = client;
     client->setCloseClientOnQueueFull(false);
-    writeLog("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    writeLog("WebSocket client #%u connected from %s", client->id(), client->remoteIP().toString().c_str());
     if (!dataProzessing /*&& wsClient != nullptr && wsClient->canSend()*/)
       notifyClients();
     break;
   case WS_EVT_PING:
     break;
   case WS_EVT_DISCONNECT:
-    writeLog("WebSocket client #%u disconnected\n", client->id());
+    writeLog("WebSocket client #%u disconnected", client->id());
     wsClient = nullptr;
     ws.cleanupClients();
     break;
@@ -584,7 +587,11 @@ void ReadVEData()
   size_t drained = 0;
   while (veSerial.available())
   {
-    myve.rxData(veSerial.read());
+    const int rxByte = veSerial.read();
+    if (rxByte < 0)
+      continue;
+    lastVeSerialByteMs = millis();
+    myve.rxData((uint8_t)rxByte);
     drained++;
     if ((drained & 0x1F) == 0)
       esp_yield();
@@ -595,6 +602,23 @@ void ReadVEData()
     veSerialOverflowCount++;
     writeLog("[VE] serial rx overflow #%lu", (unsigned long)veSerialOverflowCount);
   }
+}
+
+bool isVeSerialQuiet()
+{
+  return millis() - lastVeSerialByteMs >= VE_SERIAL_QUIET_MS;
+}
+
+void updateMdnsIfDue()
+{
+  const uint32_t now = millis();
+  if (now - mdnsTimer < 1000UL)
+    return;
+  if (ESP.getFreeHeap() < LOW_HEAP_GUARD_BYTES)
+    return;
+
+  mdnsTimer = now;
+  MDNS.update();
 }
 
 void queueVeDataProcessing()
@@ -1077,6 +1101,7 @@ server.on(
                 }
                 request->send(426, "text/plain", "WebSocket upgrade required"); });
 
+    webSerial.setCustomHtmlPage((const uint8_t *)HTML_WEBSERIAL, sizeof(HTML_WEBSERIAL) - 1);
     webSerial.begin(&server);
 
     server.begin();
@@ -1095,7 +1120,6 @@ server.on(
 
 void loop()
 {
-  MDNS.update();
   if (Update.isRunning())
   {
     workerCanRun = false;
@@ -1103,39 +1127,43 @@ void loop()
   if (workerCanRun)
   {
     ReadVEData();
-    tempSens.update();
-    applyBufferedTemperatureData();
-    processPendingVeData();
-
-    // Make sure wifi is in the right mode
-    if (WiFi.status() == WL_CONNECTED)
-    { // No use going to next step unless WIFI is up and running.
-      mqttclient.loop(); // Check if we have something to read from MQTT
-
-      if (millis() - mqtttimer > (_settings.get.mqttRefresh() * 1000UL) || mqtttimer == 0)
-      {
-        writeLog("<MQTT> Data Send...");
-        sendtoMQTT(); // Update data to MQTT server if we should
-        mqtttimer = millis();
-      }
-    }
-    notificationLED(); // notification LED routine
-    checkWiFiAndMaybeReboot();
-
-    if ((haDiscTrigger || _settings.get.haDiscovery()) && measureJson(Json) > jsonSize)
+    if (isVeSerialQuiet())
     {
-      if (sendHaDiscovery())
-      {
-        haDiscTrigger = false;
-        jsonSize = measureJson(Json);
+      updateMdnsIfDue();
+      tempSens.update();
+      applyBufferedTemperatureData();
+      processPendingVeData();
+
+      // Make sure wifi is in the right mode
+      if (WiFi.status() == WL_CONNECTED)
+      { // No use going to next step unless WIFI is up and running.
+        mqttclient.loop(); // Check if we have something to read from MQTT
+
+        if (millis() - mqtttimer > (_settings.get.mqttRefresh() * 1000UL) || mqtttimer == 0)
+        {
+          writeLog("<MQTT> Data Send...");
+          sendtoMQTT(); // Update data to MQTT server if we should
+          mqtttimer = millis();
+        }
       }
+      notificationLED(); // notification LED routine
+      checkWiFiAndMaybeReboot();
+
+      if ((haDiscTrigger || _settings.get.haDiscovery()) && measureJson(Json) > jsonSize)
+      {
+        if (sendHaDiscovery())
+        {
+          haDiscTrigger = false;
+          jsonSize = measureJson(Json);
+        }
+      }
+      Json["Device_name"] = _settings.get.deviceName();
+      Json["Device_connection"] = !myve.veError;
+      Json["Remote_Control_State"] = remoteControlState;
+      setEspDataValue("IP", WiFi.localIP().toString());
+      setEspDataValue("Wifi_RSSI", WiFi.RSSI());
+      setEspDataValue("VE_RX_Overflow", veSerialOverflowCount);
     }
-    Json["Device_name"] = _settings.get.deviceName();
-    Json["Device_connection"] = !myve.veError;
-    Json["Remote_Control_State"] = remoteControlState;
-    setEspDataValue("IP", WiFi.localIP().toString());
-    setEspDataValue("Wifi_RSSI", WiFi.RSSI());
-    setEspDataValue("VE_RX_Overflow", veSerialOverflowCount);
   }
 
   if (restartNow && millis() >= (RestartTimer + 500))
@@ -1148,7 +1176,6 @@ void loop()
 void prozessData()
 {
   dataProzessing = true;
-  writeLog("VE callback triggered... prozessing data");
   getJsonData();
   notifyClients();
   dataProzessing = false;
@@ -1168,7 +1195,6 @@ bool getJsonData()
   setEspDataValue("WS_Clients", ws.count());
   setEspDataValue("Runtime", millis() / 1000);
   setEspDataValue("VE_RX_Overflow", veSerialOverflowCount);
-  writeLog("VE data: %d:%d:%d", myve.veEnd, myve.veErrorCount, myve.veError);
   for (size_t i = 0; i < myve.veEnd; i++)
   {
 
@@ -1624,7 +1650,21 @@ void writeLog(const char *format, ...)
   vsnprintf(msg, sizeof(msg), format, args); // do check return value
   va_end(args);
 
+  char *line = msg;
+  while (*line == '\r' || *line == '\n')
+    line++;
+
+  char *end = line + strlen(line);
+  while (end > line && (end[-1] == '\r' || end[-1] == '\n'))
+    *--end = '\0';
+
+  if (*line == '\0')
+    return;
+
+  const size_t lineLen = strlen(line);
+
   // write msg to the log
-  DBG_PRINTLN(msg);
-  DBG_WEBLN(msg);
+  DBG_PRINTLN(line);
+  if (ESP.getFreeHeap() >= LOW_HEAP_GUARD_BYTES && webSerial.getConnectionCount() > 0)
+    webSerial.write((const uint8_t *)line, lineLen);
 }

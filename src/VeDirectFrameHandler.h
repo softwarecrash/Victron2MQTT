@@ -12,6 +12,8 @@ public:
 	static const size_t frameLen = buffLen;     // Temp frame buffers must not be smaller than public buffers.
 	static const size_t nameLen = 9;            // VE.Direct Protocol: max name size is 9 including /0
 	static const size_t valueLen = 33;          // VE.Direct Protocol: max value size is 33 including /0
+	static const size_t rawFrameLen = 512;      // Raw frame capture for CRC diagnostics.
+	static const uint32_t crcDetailLogIntervalMs = 5000;
 
 
 
@@ -64,9 +66,20 @@ private:
 	char mValue[valueLen] = { };                // buffer for the field value
 	char tempName[frameLen][nameLen] = { };     // private buffer for received names
 	char tempValue[frameLen][valueLen] = { };   // private buffer for received values
+	uint8_t rawFrame[rawFrameLen] = { };        // raw bytes used for CRC diagnostics
+	size_t rawFrameIndex = 0;                   // captured raw byte count
+	size_t rawFrameBytes = 0;                   // total raw byte count
+	bool rawFrameStarted = false;               // true after first captured byte
+	bool rawFrameOverflow = false;              // true if raw capture was truncated
+	uint32_t lastCrcDetailLogMs = 0;            // detailed CRC log throttle
+	uint16_t suppressedCrcLogCount = 0;         // CRC logs suppressed by throttle
 
 	void textRxEvent(char *, char *);
-	void frameEndEvent(bool);
+	void frameEndEvent(bool, uint8_t, uint8_t, uint8_t);
 	bool hexRxEvent(uint8_t);
+	void resetRawFrame();
+	void captureRawFrameByte(uint8_t);
+	void logChecksumFailure(uint8_t, uint8_t, uint8_t);
+	void logEscapedRawFrame();
 };
 #endif // FRAMEHANDLER_H_

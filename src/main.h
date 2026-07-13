@@ -8,8 +8,10 @@
 #define TEMPSENS_PIN 04 // DS18B20 Pin
 #define TIME_INTERVAL 2500 // Time interval among sensor readings [milliseconds]
 #define JSON_BUFFER 1536//2048
-#define VE_RX_BUFFER 256
+#define VE_RX_BUFFER 384
 #define VE_ISR_BUFFER 2048
+#define VE_SERIAL_QUIET_MS 25
+#define LOW_HEAP_GUARD_BYTES 12000
 #define MAX_TEMPERATURE_SENSORS 15
 
 #define FlashSize ESP.getFreeSketchSpace()
@@ -54,6 +56,8 @@ void notifyClients();
 void queueVeDataProcessing();
 
 void processPendingVeData();
+
+bool isVeSerialQuiet();
 
 void mqttCallback(char *top, byte *payload, unsigned int length);
 
